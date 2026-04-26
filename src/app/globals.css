@@ -1,0 +1,317 @@
+@import 'tailwindcss';
+
+@theme inline {
+  /* ─────────────────────────────────────────────────────────────
+     PALETTE — Reprise exacte du site mynicebracelet
+  ───────────────────────────────────────────────────────────── */
+  --color-brand: #3d5a73;
+  --color-brand-dark: #2d3748;
+  --color-brand-light: #5a7088;
+  --color-cream: #f5f0e8;
+  --color-cream-dark: #eee9e0;
+  --color-muted: #718096;
+  --color-accent: #a8bed4;
+
+  /* Aliases conservés pour compat avec mes composants déjà écrits */
+  --color-canvas: #f5f0e8;          /* cream */
+  --color-paper: #ffffff;           /* blanc pour cards */
+  --color-paper-warm: #f5f0e8;      /* cream */
+  --color-ink: #2d3748;             /* brand-dark */
+  --color-graphite: #2d3748;        /* brand-dark */
+  --color-line: #eee9e0;            /* cream-dark */
+  --color-line-strong: #eee9e0;
+
+  /* Anciens "accents gold" remappés sur brand */
+  --color-gold: #3d5a73;
+  --color-gold-deep: #3d5a73;
+  --color-gold-pale: #a8bed4;
+
+  /* Variations UI */
+  --color-brand-hover: #2a3f50;
+  --color-text-soft: #d6e0ec;
+  --color-text-softer: #b0c2d3;
+  --color-terracotta: #a4473e;
+  --color-sage: #7a8b6e;
+
+  /* Stone colors — inchangés, servent au configurateur */
+  --color-stone-amethyst: #8b6f9b;
+  --color-stone-turquoise: #6b9b95;
+  --color-stone-rose-quartz: #d4a8a0;
+  --color-stone-lapis: #3b5a7a;
+  --color-stone-onyx: #2a2a2a;
+  --color-stone-jade: #7a9b6e;
+  --color-stone-amber: #b8823c;
+  --color-stone-pearl: #ede4d3;
+
+  /* ─────────────────────────────────────────────────────────────
+     TYPOGRAPHY — system stack identique au site
+  ───────────────────────────────────────────────────────────── */
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-serif: Georgia, 'Times New Roman', 'Playfair Display', serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* ─────────────────────────────────────────────────────────────
+     MOTION
+  ───────────────────────────────────────────────────────────── */
+  --ease-out-editorial: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-micro: 180ms;
+  --duration-standard: 320ms;
+  --duration-section: 560ms;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   BASE
+───────────────────────────────────────────────────────────── */
+@layer base {
+  html {
+    color-scheme: light;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background: var(--color-cream);
+    color: var(--color-brand-dark);
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    font-weight: 400;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background: var(--color-brand-dark);
+    color: var(--color-cream);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    /* Color set explicitly in components (avoids overriding text-white on hero) */
+    color: inherit;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  button {
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   UTILITIES — titres éditoriaux style MNB
+───────────────────────────────────────────────────────────── */
+@layer utilities {
+  .font-serif {
+    font-family: Georgia, 'Times New Roman', serif;
+  }
+  .font-sans {
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  /* Headings MNB — toujours serif + black + uppercase + tracking-tighter */
+  .text-display-xl {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: clamp(2.5rem, 6vw + 1rem, 5rem);
+    line-height: 1.1;
+    letter-spacing: -0.04em;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+  .text-display-l {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: clamp(1.875rem, 3.5vw + 1rem, 3rem);
+    line-height: 1;
+    letter-spacing: -0.04em;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+  .text-display-m {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: clamp(1.5rem, 2vw + 1rem, 2.25rem);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+  .text-display-s {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: clamp(1.25rem, 1vw + 1rem, 1.5rem);
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+  .text-eyebrow {
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-size: 10px;
+    line-height: 1.4;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    font-weight: 900;
+  }
+  .text-caption {
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--color-muted);
+    font-style: italic;
+  }
+
+  /* Container identique au site existant (container mx-auto px-4 md:px-6) */
+  .container-editorial {
+    width: 100%;
+    max-width: 1280px;
+    margin-inline: auto;
+    padding-inline: 1rem;
+  }
+  @media (min-width: 768px) {
+    .container-editorial {
+      padding-inline: 1.5rem;
+    }
+  }
+
+  /* Hover lift */
+  .hover-lift {
+    transition:
+      transform var(--duration-standard) var(--ease-out-editorial),
+      box-shadow var(--duration-standard) var(--ease-out-editorial);
+  }
+  .hover-lift:hover {
+    transform: translateY(-4px);
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: var(--color-cream-dark);
+    border-radius: 3px;
+  }
+
+  /* ───── Animations (reprises du site existant) ───── */
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  @keyframes pulse-slow {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.9;
+      transform: scale(1.02);
+    }
+  }
+  .animate-fade-up {
+    animation: fade-up 0.7s ease-out both;
+  }
+  .animate-fade-in {
+    animation: fade-in 0.5s ease-out both;
+  }
+  .animate-scale-in {
+    animation: scale-in 0.45s ease-out both;
+  }
+  .animate-pulse-slow {
+    animation: pulse-slow 2.6s ease-in-out infinite;
+  }
+  .stagger-1 {
+    animation-delay: 0.1s;
+  }
+  .stagger-2 {
+    animation-delay: 0.2s;
+  }
+  .stagger-3 {
+    animation-delay: 0.3s;
+  }
+  .stagger-4 {
+    animation-delay: 0.4s;
+  }
+
+  /* Drop shadows — utiles sur hero */
+  .drop-shadow-hero {
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.6));
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Marquee — defined OUTSIDE @layer to guarantee application
+───────────────────────────────────────────────────────────── */
+@keyframes mnb-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.mnb-marquee {
+  overflow: hidden;
+  white-space: nowrap;
+}
+.mnb-marquee-track {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  width: max-content;
+  animation: mnb-marquee 40s linear infinite;
+  will-change: transform;
+}
+.mnb-marquee:hover .mnb-marquee-track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mnb-marquee-track {
+    animation: none;
+  }
+}

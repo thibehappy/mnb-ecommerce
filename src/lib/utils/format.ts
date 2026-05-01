@@ -33,6 +33,12 @@ export function slugify(input: string): string {
     .replace(/(^-|-$)/g, '');
 }
 
+/** Format a millimeter value into a French-locale "X,X cm" string (1 decimal). */
+export function formatCmFromMm(mm: number): string {
+  const cm = mm / 10;
+  return `${cm.toFixed(1).replace('.', ',')} cm`;
+}
+
 export function uid(prefix = ''): string {
   const r = Math.random().toString(36).slice(2, 10);
   const t = Date.now().toString(36);

@@ -9,7 +9,11 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "sync:beads": "python scripts/sync_beads.py",
+    "sync:charms": "python scripts/sync_charms.py",
+    "sync:all": "python scripts/sync_beads.py && python scripts/sync_charms.py",
+    "detour:bead": "python scripts/detour_bead.py"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.59.0",

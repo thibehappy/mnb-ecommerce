@@ -1,7 +1,7 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { Sparkles, X } from 'lucide-react';
+import { Dices, Sparkles, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useConfigurator } from '@/lib/store/configurator';
@@ -33,7 +33,46 @@ const MOOD_DESCRIPTIONS: Record<Mood, string> = {
   mystique: 'Améthyste, obsidienne',
 };
 
-export function InspireButton() {
+/**
+ * Quick "dice" button — generates a random bracelet on click,
+ * without opening any modal. Same engine as the styles modal,
+ * just called with no mood (random mood picked internally).
+ */
+export function RandomDiceButton() {
+  const applyInspired = useConfigurator((s) => s.applyInspired);
+  const [spin, setSpin] = useState(0);
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        haptic([8, 18, 8]);
+        applyInspired();
+        setSpin((s) => s + 1);
+      }}
+      aria-label="Générer un bracelet aléatoire"
+      title="Bracelet aléatoire"
+      className="group inline-flex items-center justify-center gap-2 h-10 px-4 rounded-full bg-white/85 backdrop-blur-md border border-[#EEE9E0] text-[#3D5A73] hover:text-[#2D3748] hover:bg-white hover:border-[#3D5A73] active:scale-95 transition-all shadow-sm"
+    >
+      <motion.span
+        key={spin}
+        initial={{ rotate: 0 }}
+        animate={{ rotate: 360 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="inline-flex"
+      >
+        <Dices size={15} strokeWidth={2.2} />
+      </motion.span>
+      <span className="text-[10px] font-black uppercase tracking-widest">Aléatoire</span>
+    </button>
+  );
+}
+
+/**
+ * "Styles" button — opens a modal with curated mood palettes only.
+ * The random / surprise option lives in the separate dice button.
+ */
+export function StylesButton() {
   const applyInspired = useConfigurator((s) => s.applyInspired);
   const [open, setOpen] = useState(false);
   const [lastMood, setLastMood] = useState<Mood | null>(null);
@@ -54,7 +93,7 @@ export function InspireButton() {
     };
   }, [open]);
 
-  function handleMood(mood?: Mood) {
+  function handleMood(mood: Mood) {
     haptic(8);
     const applied = applyInspired(mood);
     setLastMood(applied);
@@ -72,7 +111,7 @@ export function InspireButton() {
         className="inline-flex items-center gap-2 h-10 px-4 rounded-full bg-[#3D5A73] hover:bg-[#2A3F50] text-white text-[10px] uppercase tracking-widest font-black shadow-md hover:shadow-lg active:scale-95 transition-all"
       >
         <Sparkles size={14} strokeWidth={2.2} />
-        {lastMood ? `Inspiré · ${moodLabel(lastMood)}` : 'Inspire-moi'}
+        {lastMood ? `Style · ${moodLabel(lastMood)}` : 'Styles'}
       </button>
 
       {mounted &&
@@ -88,90 +127,87 @@ export function InspireButton() {
                 onClick={() => setOpen(false)}
                 className="fixed inset-0 z-[2000] bg-[rgba(26,32,44,0.6)] backdrop-blur-[2px] flex items-center justify-center p-4 overflow-y-auto"
               >
-            <motion.div
-              initial={{ scale: 0.96, opacity: 0, y: 8 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.96, opacity: 0 }}
-              transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
-              onClick={(e) => e.stopPropagation()}
-              className="relative bg-white rounded-[1.5rem] md:rounded-[2rem] max-w-lg w-full shadow-2xl border border-[#EEE9E0] my-auto"
-            >
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                aria-label="Fermer"
-                className="absolute top-4 right-4 inline-flex items-center justify-center h-9 w-9 rounded-full text-[#718096] hover:bg-[#F5F0E8] hover:text-[#2D3748] transition-colors"
-              >
-                <X size={18} strokeWidth={1.8} />
-              </button>
-
-              <div className="p-6 md:p-8">
-                <div className="mb-6">
-                  <span className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.4em] text-[#3D5A73] inline-flex items-center gap-2">
-                    <Sparkles size={12} /> Moteur d&rsquo;harmonie
-                  </span>
-                  <h3 className="text-2xl md:text-3xl font-serif font-black text-[#2D3748] tracking-tighter uppercase leading-tight mt-2">
-                    Inspirez-moi
-                  </h3>
-                  <p className="text-[13px] text-[#718096] italic leading-relaxed mt-1">
-                    Choisissez une ambiance ou laissez-nous vous surprendre.
-                  </p>
-                </div>
-
-                {/* Random / surprise me */}
-                <button
-                  type="button"
-                  onClick={() => handleMood()}
-                  className="w-full mb-5 inline-flex items-center justify-between px-5 py-4 rounded-2xl bg-[#2D3748] hover:bg-[#1A202C] text-white text-[11px] font-black uppercase tracking-widest shadow-md active:scale-[0.99] transition-all"
+                <motion.div
+                  initial={{ scale: 0.96, opacity: 0, y: 8 }}
+                  animate={{ scale: 1, opacity: 1, y: 0 }}
+                  exit={{ scale: 0.96, opacity: 0 }}
+                  transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="relative bg-white rounded-[1.5rem] md:rounded-[2rem] max-w-lg w-full shadow-2xl border border-[#EEE9E0] my-auto"
                 >
-                  <span className="inline-flex items-center gap-2">
-                    <Sparkles size={14} strokeWidth={2.2} />
-                    Surprenez-moi
-                  </span>
-                  <span className="text-white/60 text-[10px]">aléatoire</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => setOpen(false)}
+                    aria-label="Fermer"
+                    className="absolute top-4 right-4 inline-flex items-center justify-center h-9 w-9 rounded-full text-[#718096] hover:bg-[#F5F0E8] hover:text-[#2D3748] transition-colors"
+                  >
+                    <X size={18} strokeWidth={1.8} />
+                  </button>
 
-                <div className="grid grid-cols-2 gap-2 md:gap-3">
-                  {AVAILABLE_MOODS.map((mood) => (
-                    <button
-                      key={mood}
-                      type="button"
-                      onClick={() => handleMood(mood)}
-                      className={cn(
-                        'group relative flex items-center gap-3 p-3 md:p-3.5 rounded-2xl border-2 border-[#EEE9E0] bg-white hover:border-[#3D5A73] hover:shadow-md active:scale-[0.98] transition-all text-left',
-                      )}
-                    >
-                      <div className="flex -space-x-1.5 shrink-0">
-                        {MOOD_PALETTES[mood].map((hex, i) => (
-                          <span
-                            key={i}
-                            className="inline-block h-7 w-7 rounded-full border-2 border-white shadow-sm"
-                            style={{ backgroundColor: hex }}
-                          />
-                        ))}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[12px] md:text-[13px] font-serif font-black text-[#2D3748] uppercase tracking-tight leading-none mb-1">
-                          {moodLabel(mood)}
-                        </p>
-                        <p className="text-[10px] text-[#A8BED4] font-medium italic leading-tight truncate">
-                          {MOOD_DESCRIPTIONS[mood]}
-                        </p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
+                  <div className="p-6 md:p-8">
+                    <div className="mb-6">
+                      <span className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.4em] text-[#3D5A73] inline-flex items-center gap-2">
+                        <Sparkles size={12} /> Moteur d&rsquo;harmonie
+                      </span>
+                      <h3 className="text-2xl md:text-3xl font-serif font-black text-[#2D3748] tracking-tighter uppercase leading-tight mt-2">
+                        Choisissez un style
+                      </h3>
+                      <p className="text-[13px] text-[#718096] italic leading-relaxed mt-1">
+                        Sélectionnez une ambiance pour générer un bracelet en accord.
+                      </p>
+                    </div>
 
-                <p className="text-[10px] font-black uppercase tracking-widest text-[#A8BED4] text-center mt-6">
-                  Le moteur respecte les contraintes de votre atelier
-                </p>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
+                    <div className="grid grid-cols-2 gap-2 md:gap-3">
+                      {AVAILABLE_MOODS.map((mood) => (
+                        <button
+                          key={mood}
+                          type="button"
+                          onClick={() => handleMood(mood)}
+                          className={cn(
+                            'group relative flex items-center gap-3 p-3 md:p-3.5 rounded-2xl border-2 border-[#EEE9E0] bg-white hover:border-[#3D5A73] hover:shadow-md active:scale-[0.98] transition-all text-left',
+                          )}
+                        >
+                          <div className="flex -space-x-1.5 shrink-0">
+                            {MOOD_PALETTES[mood].map((hex, i) => (
+                              <span
+                                key={i}
+                                className="inline-block h-7 w-7 rounded-full border-2 border-white shadow-sm"
+                                style={{ backgroundColor: hex }}
+                              />
+                            ))}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[12px] md:text-[13px] font-serif font-black text-[#2D3748] uppercase tracking-tight leading-none mb-1">
+                              {moodLabel(mood)}
+                            </p>
+                            <p className="text-[10px] text-[#A8BED4] font-medium italic leading-tight truncate">
+                              {MOOD_DESCRIPTIONS[mood]}
+                            </p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+
+                    <p className="text-[10px] font-black uppercase tracking-widest text-[#A8BED4] text-center mt-6">
+                      Le moteur respecte les contraintes de votre atelier
+                    </p>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
           </AnimatePresence>,
           document.body,
         )}
+    </>
+  );
+}
+
+/** Backwards-compat default export — renders both buttons side-by-side. */
+export function InspireButton() {
+  return (
+    <>
+      <RandomDiceButton />
+      <StylesButton />
     </>
   );
 }

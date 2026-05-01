@@ -1,224 +1,50 @@
 import type { Charm } from '@/types';
+import { CHARM_PHOTOS } from './charm-photos.generated';
 
-export const CHARMS: Charm[] = [
-  // Lettres
+/**
+ * Catalogue charms + figurines.
+ *
+ * Discriminator `kind` :
+ *   - 'charm'    → vrai charm (Classique uniquement, à glisser entre perles).
+ *                  PNG dans public/photos/charms/<id>.png
+ *   - 'figurine' → figurine émaillée 3D (Kawaii uniquement, type Sanrio/Disney).
+ *                  PNG dans public/photos/figurines/<id>.png
+ *                  Si licensed: 'sanrio' | 'disney' → ajouter surcharge: 6 €.
+ *
+ * À ce jour le catalogue est volontairement vide :
+ *   - Les vrais charms (lettres / médailles / lunes) ne sont pas encore shootés
+ *   - Aucune figurine licenciée Sanrio / Disney n'est encore référencée
+ *
+ * Les anciennes formes émaillées (cœur, étoile, marguerite, nœuds) qu'on
+ * appelait "figurines" sont en fait des perles : elles ont migré vers
+ * src/lib/mocks/beads.ts avec family='enamel'.
+ *
+ * Pour ajouter un nouvel élément :
+ *   1. Drop le PNG détouré dans le dossier correspondant à son kind.
+ *   2. `npm run sync:charms` regénère charm-photos.generated.ts.
+ *   3. Ajouter l'entrée ci-dessous avec id matchant + kind matchant.
+ */
+const CHARMS_RAW: Charm[] = [
+  // ─── Figurines (Kawaii) ───
   {
-    id: 'charm_letter_a',
-    name: 'Lettre A',
-    category: 'lettre',
-    material: 'dore',
-    price: 3.5,
-    stock: 200,
-    description: 'Lettre dorée, gravée à la main.',
-    images: [],
-    renderSize: 18,
-  },
-  {
-    id: 'charm_letter_m',
-    name: 'Lettre M',
-    category: 'lettre',
-    material: 'dore',
-    price: 3.5,
-    stock: 200,
-    description: 'Lettre dorée, gravée à la main.',
-    images: [],
-    renderSize: 18,
-  },
-  {
-    id: 'charm_letter_l',
-    name: 'Lettre L',
-    category: 'lettre',
-    material: 'dore',
-    price: 3.5,
-    stock: 200,
-    description: 'Lettre dorée, gravée à la main.',
-    images: [],
-    renderSize: 18,
-  },
-  // Cœurs
-  {
-    id: 'charm_heart_gold',
-    name: 'Cœur doré',
-    category: 'coeur',
-    material: 'dore',
-    price: 4.0,
-    stock: 150,
-    description: 'Petit cœur doré, finition brossée.',
-    images: [],
-    renderSize: 20,
-  },
-  {
-    id: 'charm_heart_enamel_red',
-    name: 'Cœur émail rouge',
-    category: 'coeur',
+    id: 'charm_figurine_signature',
+    name: 'Figurine signature',
+    category: 'kawaii',
     material: 'email',
+    kind: 'figurine',
+    sizeMm: 12,
     price: 4.5,
-    stock: 110,
-    description: 'Cœur émaillé rouge carmin.',
+    stock: 50,
+    description: 'Figurine émaillée signature MyNiceBracelet.',
     images: [],
-    renderSize: 20,
-  },
-  {
-    id: 'charm_heart_pearl',
-    name: 'Cœur nacré',
-    category: 'coeur',
-    material: 'pierre',
-    price: 5.0,
-    stock: 80,
-    description: 'Cœur sculpté dans la nacre.',
-    images: [],
-    renderSize: 20,
-  },
-  // Étoiles
-  {
-    id: 'charm_star_gold',
-    name: 'Étoile dorée',
-    category: 'etoile',
-    material: 'dore',
-    price: 3.8,
-    stock: 140,
-    description: 'Étoile à cinq branches, dorée.',
-    images: [],
-    renderSize: 18,
-  },
-  {
-    id: 'charm_star_silver',
-    name: 'Étoile argentée',
-    category: 'etoile',
-    material: 'argente',
-    price: 3.8,
-    stock: 140,
-    description: 'Étoile à cinq branches, argent mat.',
-    images: [],
-    renderSize: 18,
-  },
-  // Lune
-  {
-    id: 'charm_moon_gold',
-    name: 'Lune dorée',
-    category: 'lune',
-    material: 'dore',
-    price: 4.2,
-    stock: 120,
-    description: 'Croissant de lune, finition satinée.',
-    images: [],
-    renderSize: 22,
-  },
-  // Fleurs
-  {
-    id: 'charm_flower_daisy',
-    name: 'Marguerite',
-    category: 'fleur',
-    material: 'email',
-    price: 4.5,
-    stock: 90,
-    description: 'Marguerite émaillée blanc et jaune.',
-    images: [],
-    renderSize: 22,
-  },
-  {
-    id: 'charm_flower_cherry',
-    name: 'Fleur de cerisier',
-    category: 'fleur',
-    material: 'email',
-    price: 4.8,
-    stock: 80,
-    description: 'Fleur rose pâle, émail délicat.',
-    images: [],
-    renderSize: 22,
-  },
-  // Animaux
-  {
-    id: 'charm_butterfly',
-    name: 'Papillon',
-    category: 'animal',
-    material: 'email',
-    price: 5.2,
-    stock: 70,
-    description: 'Papillon ailes émaillées bleu.',
-    images: [],
-    renderSize: 24,
-  },
-  {
-    id: 'charm_bee',
-    name: 'Abeille',
-    category: 'animal',
-    material: 'dore',
-    price: 5.0,
-    stock: 80,
-    description: 'Abeille finement ciselée, dorée.',
-    images: [],
-    renderSize: 22,
-  },
-  // Kawaii — signature MNB
-  {
-    id: 'charm_kawaii_panda',
-    name: 'Panda kawaii',
-    category: 'kawaii',
-    material: 'email',
-    price: 6.0,
-    stock: 60,
-    description: 'Panda émaillé, signature MyNiceBracelet.',
-    images: [],
-    renderSize: 26,
-  },
-  {
-    id: 'charm_kawaii_cloud',
-    name: 'Petit nuage',
-    category: 'kawaii',
-    material: 'email',
-    price: 5.5,
-    stock: 100,
-    description: 'Nuage blanc émaillé, sourire discret.',
-    images: [],
-    renderSize: 24,
-  },
-  {
-    id: 'charm_kawaii_star_smile',
-    name: 'Étoile souriante',
-    category: 'kawaii',
-    material: 'email',
-    price: 5.5,
-    stock: 110,
-    description: 'Étoile émaillée jaune, signature kawaii.',
-    images: [],
-    renderSize: 22,
-  },
-  // Symboles
-  {
-    id: 'charm_evil_eye',
-    name: 'Œil protecteur',
-    category: 'symbole',
-    material: 'email',
-    price: 4.8,
-    stock: 140,
-    description: 'Nazar bleu, amulette protectrice.',
-    images: [],
-    renderSize: 20,
-  },
-  {
-    id: 'charm_infinity',
-    name: 'Infini',
-    category: 'symbole',
-    material: 'dore',
-    price: 4.0,
-    stock: 130,
-    description: 'Symbole infini, finition dorée.',
-    images: [],
-    renderSize: 20,
-  },
-  {
-    id: 'charm_cross',
-    name: 'Croix',
-    category: 'symbole',
-    material: 'dore',
-    price: 4.2,
-    stock: 100,
-    description: 'Petite croix discrète, dorée.',
-    images: [],
-    renderSize: 18,
   },
 ];
+
+/** Final CHARMS export with photo URLs merged in from the photo manifest. */
+export const CHARMS: Charm[] = CHARMS_RAW.map((c) => {
+  const photos = CHARM_PHOTOS[c.id];
+  return photos && photos.length > 0 ? { ...c, images: photos } : c;
+});
 
 export const CHARM_BY_ID = Object.fromEntries(CHARMS.map((c) => [c.id, c])) as Record<
   string,

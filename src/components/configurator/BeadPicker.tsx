@@ -3,10 +3,16 @@
 import { useMemo, useState } from 'react';
 import { BEADS } from '@/lib/mocks/beads';
 import { ATELIER_BY_ID } from '@/lib/mocks/ateliers';
-import { useConfigurator } from '@/lib/store/configurator';
+import {
+  useConfigurator,
+  totalLengthMm,
+  maxMmOf,
+} from '@/lib/store/configurator';
 import { StoneSwatch } from '@/components/ui/StoneSwatch';
 import type { BeadShape } from '@/types';
 import { haptic } from '@/lib/utils/feedback';
+import { beadPhotoZoom } from '@/lib/utils/bead-display';
+import { formatCmFromMm } from '@/lib/utils/format';
 import { cn } from '@/lib/utils/cn';
 
 const SHAPE_LABELS: Record<BeadShape, string> = {
@@ -15,6 +21,11 @@ const SHAPE_LABELS: Record<BeadShape, string> = {
   rondelle: 'Rondelle',
   nugget: 'Brute',
   tube: 'Tube',
+  cube: 'Cube',
+  heart: 'Cœur',
+  star: 'Étoile',
+  flower: 'Fleur',
+  bow: 'Nœud',
 };
 
 interface BeadPickerProps {
@@ -25,19 +36,18 @@ interface BeadPickerProps {
 export function BeadPicker({ onTilePointerDown }: BeadPickerProps = {}) {
   const addBead = useConfigurator((s) => s.addBead);
   const atelierId = useConfigurator((s) => s.atelierId);
+  const sizeCm = useConfigurator((s) => s.sizeCm);
   const components = useConfigurator((s) => s.components);
   const atelier = ATELIER_BY_ID[atelierId];
 
   const [shapeFilter, setShapeFilter] = useState<BeadShape | null>(null);
 
-  // Only beads compatible with the chosen atelier
+  // Only beads compatible with the chosen atelier — and only those that have a real
+  // product photo (we removed the SVG-fallback display: we surface the actual catalog only).
   const atelierBeads = useMemo(() => {
-    if (!atelier) return BEADS;
-    return BEADS.filter((b) => {
-      if (!atelier.allowedBeadFamilies.includes(b.family)) return false;
-      if (atelier.preferredBeadSizes && !atelier.preferredBeadSizes.includes(b.size)) return false;
-      return true;
-    });
+    const withPhoto = BEADS.filter((b) => b.images.length > 0);
+    if (!atelier) return withPhoto;
+    return withPhoto.filter((b) => atelier.allowedBeadFamilies.includes(b.family));
   }, [atelier]);
 
   const shapes = useMemo(
@@ -47,9 +57,10 @@ export function BeadPicker({ onTilePointerDown }: BeadPickerProps = {}) {
 
   const filtered = atelierBeads.filter((b) => !shapeFilter || b.shape === shapeFilter);
 
-  const beadsCount = components.filter((c) => c.kind === 'bead').length;
-  const max = atelier?.beadCount ?? 0;
-  const atLimit = beadsCount >= max;
+  const lengthMm = totalLengthMm(components);
+  const maxMm = maxMmOf(atelierId, sizeCm);
+  const remainingMm = Math.max(0, maxMm - lengthMm);
+  const atLimit = remainingMm < 0.0001;
 
   return (
     <div className="space-y-5">
@@ -60,8 +71,8 @@ export function BeadPicker({ onTilePointerDown }: BeadPickerProps = {}) {
           </h3>
           <p className="text-[13px] text-[#718096] italic">
             {atLimit
-              ? 'Toutes vos perles sont placées. Retirez-en une pour changer.'
-              : `Cliquez pour ajouter (${max - beadsCount} à placer)`}
+              ? `Bracelet plein (${formatCmFromMm(lengthMm)}). Retirez-en une pour changer.`
+              : `Encore ${formatCmFromMm(remainingMm)} disponibles`}
           </p>
         </div>
         <div
@@ -72,7 +83,7 @@ export function BeadPicker({ onTilePointerDown }: BeadPickerProps = {}) {
               : 'bg-[#F5F0E8] text-[#2D3748] border border-[#EEE9E0]',
           )}
         >
-          {beadsCount}/{max}
+          {formatCmFromMm(lengthMm)} / {formatCmFromMm(maxMm)}
         </div>
       </div>
 
@@ -99,42 +110,60 @@ export function BeadPicker({ onTilePointerDown }: BeadPickerProps = {}) {
       )}
 
       <div>
+        {filtered.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-[#EEE9E0] bg-[#F5F0E8]/60 px-4 py-8 text-center">
+            <p className="text-[12px] font-black uppercase tracking-widest text-[#A8BED4] mb-1">
+              Section vide
+            </p>
+            <p className="text-[13px] text-[#718096] italic">
+              Aucune perle disponible pour le moment.
+            </p>
+          </div>
+        ) : (
         <div className="grid grid-cols-3 gap-2 md:gap-3">
-          {filtered.map((bead) => (
-            <button
-              key={bead.id}
-              type="button"
-              disabled={atLimit}
-              onPointerDown={(e) => {
-                if (atLimit) return;
-                onTilePointerDown?.(bead.id, e);
-              }}
-              onClick={() => {
-                addBead(bead.id);
-                haptic(4);
-              }}
-              className="group relative aspect-square flex flex-col items-center justify-center gap-1.5 p-2 md:p-3 bg-[#F5F0E8] rounded-xl md:rounded-2xl border border-transparent hover:border-[#3D5A73] hover:bg-white hover:shadow-md active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-transparent disabled:hover:bg-[#F5F0E8] disabled:hover:shadow-none cursor-grab active:cursor-grabbing touch-none select-none"
-              aria-label={`Ajouter ${bead.name}`}
-            >
-              <div className="transition-transform duration-300 group-hover:scale-110">
-                <StoneSwatch
-                  hex={bead.hex}
-                  veinHex={bead.veinHex}
-                  size={54}
-                  faceted={bead.shape === 'faceted'}
-                />
-              </div>
-              <div className="text-center min-w-0 w-full">
-                <p className="text-[10px] md:text-[11px] font-black uppercase tracking-tight text-[#2D3748] truncate leading-tight">
-                  {bead.name.split(' ')[0]}
-                </p>
-                <p className="text-[9px] font-black text-[#A8BED4] uppercase tracking-widest tabular-nums">
-                  {bead.size}mm
-                </p>
-              </div>
-            </button>
-          ))}
+          {filtered.map((bead) => {
+            const fits = lengthMm + bead.sizeMm <= maxMm + 0.0001;
+            const disabled = !fits;
+            return (
+              <button
+                key={bead.id}
+                type="button"
+                disabled={disabled}
+                onPointerDown={(e) => {
+                  if (disabled) return;
+                  onTilePointerDown?.(bead.id, e);
+                }}
+                onClick={() => {
+                  if (disabled) return;
+                  addBead(bead.id);
+                  haptic(4);
+                }}
+                className="group relative aspect-square flex flex-col items-center justify-center gap-1.5 p-2 md:p-3 bg-[#F5F0E8] rounded-xl md:rounded-2xl border border-transparent hover:border-[#3D5A73] hover:bg-white hover:shadow-md active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-transparent disabled:hover:bg-[#F5F0E8] disabled:hover:shadow-none cursor-grab active:cursor-grabbing touch-none select-none"
+                aria-label={`Ajouter ${bead.name}`}
+              >
+                <div className="transition-transform duration-300 group-hover:scale-110">
+                  <StoneSwatch
+                    hex={bead.hex}
+                    veinHex={bead.veinHex}
+                    size={54}
+                    faceted={bead.shape === 'faceted'}
+                    image={bead.images[0]}
+                    zoom={beadPhotoZoom(bead.shape)}
+                  />
+                </div>
+                <div className="text-center min-w-0 w-full">
+                  <p className="text-[10px] md:text-[11px] font-black uppercase tracking-tight text-[#2D3748] truncate leading-tight">
+                    {bead.name.split(' ')[0]}
+                  </p>
+                  <p className="text-[9px] font-black text-[#A8BED4] uppercase tracking-widest tabular-nums">
+                    {bead.sizeMm.toString().replace('.', ',')}mm
+                  </p>
+                </div>
+              </button>
+            );
+          })}
         </div>
+        )}
       </div>
     </div>
   );

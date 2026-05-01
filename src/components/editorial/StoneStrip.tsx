@@ -2,7 +2,7 @@ import { StoneSwatch } from '@/components/ui/StoneSwatch';
 import { BEADS } from '@/lib/mocks/beads';
 
 export function StoneStrip() {
-  const featured = BEADS.filter((b) => b.shape === 'round' && b.size === 6).slice(0, 8);
+  const featured = BEADS.filter((b) => b.shape === 'round' && b.sizeMm === 6).slice(0, 8);
   return (
     <section className="py-16 md:py-28 bg-[#F5F0E8]">
       <div className="container mx-auto px-4 md:px-6">

@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { resolveBead, resolveCharm } from '@/lib/store/configurator';
 import { StoneSwatch } from '@/components/ui/StoneSwatch';
 import { CharmGlyph } from '@/components/ui/CharmGlyph';
+import { beadPhotoZoom } from '@/lib/utils/bead-display';
 
 interface Props {
   kind: 'bead' | 'charm';
@@ -46,6 +47,8 @@ function BeadGhost({ refId }: { refId: string }) {
       veinHex={bead.veinHex}
       size={56}
       faceted={bead.shape === 'faceted'}
+      image={bead.images[0]}
+      zoom={beadPhotoZoom(bead.shape)}
     />
   );
 }
@@ -53,5 +56,12 @@ function BeadGhost({ refId }: { refId: string }) {
 function CharmGhost({ refId }: { refId: string }) {
   const charm = resolveCharm(refId);
   if (!charm) return null;
-  return <CharmGlyph category={charm.category} material={charm.material} size={52} />;
+  return (
+    <CharmGlyph
+      category={charm.category}
+      material={charm.material}
+      size={52}
+      image={charm.images[0]}
+    />
+  );
 }

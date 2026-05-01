@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { cn } from '@/lib/utils/cn';
 
 interface Props {
@@ -12,11 +13,19 @@ interface Props {
   title?: string;
   /** Faceted look — angular highlights */
   faceted?: boolean;
+  /** Real product photo (transparent PNG) — when provided, replaces the SVG fallback */
+  image?: string;
+  /** Photo zoom factor (CSS scale). Use beadPhotoZoom(shape) from
+   *  @/lib/utils/bead-display for shape-appropriate values. Defaults to 3
+   *  which is right for round / faceted beads (lots of PNG padding) but
+   *  crops shaped beads (heart, star, flower, bow). */
+  zoom?: number;
 }
 
 /**
- * Renders a stone-like orb using only SVG. No bitmap, no external asset.
- * Used everywhere a bead photo would go, until real product photography arrives.
+ * Renders a bead-like orb. When a real product photo URL is provided via
+ * `image`, displays the photo (with transparent background). Otherwise
+ * falls back to a stylized SVG with radial gradient + veining + highlight.
  */
 export function StoneSwatch({
   hex,
@@ -26,7 +35,30 @@ export function StoneSwatch({
   className,
   title,
   faceted = false,
+  image,
+  zoom = 3,
 }: Props) {
+  if (image) {
+    return (
+      <div
+        className={cn('relative shrink-0 select-none overflow-hidden', className)}
+        style={{ width: size, height: size }}
+        role={title ? 'img' : 'presentation'}
+        aria-label={title}
+      >
+        <Image
+          src={image}
+          alt={title ?? ''}
+          width={size}
+          height={size}
+          draggable={false}
+          style={{ transform: `scale(${zoom})` }}
+          className="object-contain w-full h-full pointer-events-none select-none"
+        />
+      </div>
+    );
+  }
+
   const darker = veinHex ?? hex;
   const gradId = `g-${hex.slice(1)}-${veinHex?.slice(1) ?? 'x'}`;
   const highlightId = `h-${hex.slice(1)}`;
@@ -86,9 +118,33 @@ export function StoneSwatch({
             strokeOpacity="0.25"
             strokeWidth="0.6"
           />
-          <line x1="50" y1="30" x2="50" y2="80" stroke="#ffffff" strokeOpacity="0.2" strokeWidth="0.4" />
-          <line x1="30" y1="30" x2="82" y2="60" stroke="#ffffff" strokeOpacity="0.15" strokeWidth="0.4" />
-          <line x1="70" y1="30" x2="18" y2="60" stroke="#ffffff" strokeOpacity="0.15" strokeWidth="0.4" />
+          <line
+            x1="50"
+            y1="30"
+            x2="50"
+            y2="80"
+            stroke="#ffffff"
+            strokeOpacity="0.2"
+            strokeWidth="0.4"
+          />
+          <line
+            x1="30"
+            y1="30"
+            x2="82"
+            y2="60"
+            stroke="#ffffff"
+            strokeOpacity="0.15"
+            strokeWidth="0.4"
+          />
+          <line
+            x1="70"
+            y1="30"
+            x2="18"
+            y2="60"
+            stroke="#ffffff"
+            strokeOpacity="0.15"
+            strokeWidth="0.4"
+          />
         </>
       ) : null}
       <circle cx="50" cy="50" r="48" fill={`url(#${noiseId})`} />

@@ -4,6 +4,7 @@ import { Trash2 } from 'lucide-react';
 import type { CartLine } from '@/types';
 import { KIT_BY_ID } from '@/lib/mocks/kits';
 import { useCart, subtotalForLine } from '@/lib/store/cart';
+import { targetMm as targetMmOf } from '@/lib/store/configurator';
 import { formatPrice } from '@/lib/utils/format';
 import { QuantityStepper } from '@/components/ui/QuantityStepper';
 import { KitVisual } from '@/components/ui/KitVisual';
@@ -49,7 +50,11 @@ export function CartLineItem({ line }: { line: CartLine }) {
   return (
     <div className="flex gap-4 p-4">
       <div className="w-28 shrink-0 bg-[var(--color-canvas)] rounded-sm flex items-center">
-        <BraceletPreview components={line.config.components} variant="flat" />
+        <BraceletPreview
+          components={line.config.components}
+          targetMm={targetMmOf(line.config.atelierId, line.config.sizeCm)}
+          variant="flat"
+        />
       </div>
       <div className="flex flex-col flex-1 gap-2 min-w-0">
         <p className="text-eyebrow text-[var(--color-muted)]">Création</p>

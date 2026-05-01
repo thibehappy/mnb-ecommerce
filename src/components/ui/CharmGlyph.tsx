@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import type { CharmCategory, CharmMaterial } from '@/types';
 import { cn } from '@/lib/utils/cn';
 
@@ -7,6 +8,12 @@ interface Props {
   size?: number;
   className?: string;
   title?: string;
+  /** Real product photo (transparent PNG). Replaces the SVG fallback when set. */
+  image?: string;
+  /** CSS scale applied to the photo. Defaults to 1 because charm/figurine
+   *  PNGs typically already fill their canvas (unlike beads which have
+   *  ~60 % padding around them and need 3× zoom to look prominent). */
+  zoom?: number;
 }
 
 const MATERIAL_COLORS: Record<CharmMaterial, { fill: string; stroke: string; accent: string }> = {
@@ -20,7 +27,36 @@ const MATERIAL_COLORS: Record<CharmMaterial, { fill: string; stroke: string; acc
  * Geometric SVG placeholder for charm visuals.
  * Keeps the DA editorial until real product macros are ready.
  */
-export function CharmGlyph({ category, material, size = 32, className, title }: Props) {
+export function CharmGlyph({
+  category,
+  material,
+  size = 32,
+  className,
+  title,
+  image,
+  zoom = 1,
+}: Props) {
+  if (image) {
+    return (
+      <div
+        className={cn('relative shrink-0 select-none overflow-hidden', className)}
+        style={{ width: size, height: size }}
+        role={title ? 'img' : 'presentation'}
+        aria-label={title}
+      >
+        <Image
+          src={image}
+          alt={title ?? ''}
+          width={size}
+          height={size}
+          draggable={false}
+          style={{ transform: `scale(${zoom})` }}
+          className="object-contain w-full h-full pointer-events-none select-none"
+        />
+      </div>
+    );
+  }
+
   const { fill, stroke, accent } = MATERIAL_COLORS[material];
 
   return (

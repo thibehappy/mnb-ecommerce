@@ -31,14 +31,16 @@ import {
   getSizeFit,
   type SharedBraceletDesign,
 } from '@/lib/store/configurator';
+import type { FulfillmentMode } from '@/types';
 import { useCart } from '@/lib/store/cart';
-import { ATELIER_BY_ID } from '@/lib/mocks/ateliers';
+import { ATELIER_BY_ID, ATELIERS } from '@/lib/mocks/ateliers';
 import { BraceletPreview, type BraceletPreviewHandle } from './BraceletPreview';
 import { BeadPicker } from './BeadPicker';
 import { CharmPicker } from './CharmPicker';
 import { InspireButton } from './InspireButton';
 import { DragGhost } from './DragGhost';
 import { SharePreview } from './SharePreview';
+import { CompositionTray } from './CompositionTray';
 import { StoneSwatch } from '@/components/ui/StoneSwatch';
 import { CharmGlyph } from '@/components/ui/CharmGlyph';
 import { beadPhotoZoom } from '@/lib/utils/bead-display';
@@ -69,6 +71,28 @@ const DRAG_THRESHOLD = 5;
 
 const DEFAULT_BRACELET_NAME = 'Ma création';
 
+/**
+ * The two ways the bracelet can be fulfilled. Wording is intentionally
+ * identical to Dany's branch — same labels and copy as the rest of the
+ * brand uses on the artisan story / kit pages.
+ */
+const FULFILLMENT_OPTIONS: Array<{
+  id: FulfillmentMode;
+  label: string;
+  detail: string;
+}> = [
+  {
+    id: 'diy-kit',
+    label: 'Kit DIY · recommandé',
+    detail: 'Les pièces préparées, à monter chez vous.',
+  },
+  {
+    id: 'assembled-paris',
+    label: 'Assemblé à Paris',
+    detail: 'Assemblé à la main par notre atelier parisien.',
+  },
+];
+
 export function Configurator() {
   const {
     step,
@@ -88,6 +112,7 @@ export function Configurator() {
     insertCharmAt,
     clearComponents,
     reset,
+    setAtelier,
   } = useConfigurator();
   // Pulled separately because they're not part of the broad destructure above
   // — the bracelet name is persisted in the store as `draftTitle` so that it
@@ -114,6 +139,13 @@ export function Configurator() {
   // grows organically. Recipients of a gift redemption don't publish — they
   // didn't compose it, they're just acting on someone else's design.
   const publishToGallery = useGallery((s) => s.publish);
+
+  // Fulfillment mode chosen at order time : DIY kit (default — pieces
+  // packaged separately to assemble at home) or assembled in our Paris
+  // atelier. The value rides on the snapshot persisted in the cart line
+  // so the checkout page can display it on the receipt.
+  const [fulfillmentMode, setFulfillmentMode] =
+    useState<FulfillmentMode>('diy-kit');
 
   const [justAddedCart, setJustAddedCart] = useState(false);
   const [shareStatus, setShareStatus] = useState<string | null>(null);
@@ -291,7 +323,12 @@ export function Configurator() {
   function handleAddToCart() {
     if (!canOrder) return;
     const name = draftTitle || DEFAULT_BRACELET_NAME;
-    const design = snapshotConfig(useConfigurator.getState(), name, undefined);
+    const design = snapshotConfig(
+      useConfigurator.getState(),
+      name,
+      undefined,
+      fulfillmentMode,
+    );
     addCustom(design, 1);
     const rect = addToCartRef.current?.getBoundingClientRect();
     const origin = rect
@@ -317,7 +354,12 @@ export function Configurator() {
   function handleConfirmGift() {
     if (!canOrder || !activeGiftCard) return;
     const name = draftTitle || activeGiftCard.design?.title || DEFAULT_BRACELET_NAME;
-    const design = snapshotConfig(useConfigurator.getState(), name, undefined);
+    const design = snapshotConfig(
+      useConfigurator.getState(),
+      name,
+      undefined,
+      fulfillmentMode,
+    );
     if (activeGiftCard.kind === 'designed' || activeGiftCard.kind === 'open') {
       updateDesignedGift(activeGiftCard.code, design);
     }
@@ -651,9 +693,46 @@ export function Configurator() {
             <div className="relative rounded-[1.5rem] md:rounded-[2rem] overflow-hidden bg-white border border-[#EEE9E0] shadow-md flex flex-col lg:max-h-[600px]">
               <div className="overflow-y-auto scrollbar-thin">
                 {/* Tab nav — sticky edge-to-edge with its own padding.
-                    Hide the Charms / Figurines tab when the atelier doesn't
-                    allow them (Bracelet Bar). */}
+                    Top of the palette also exposes an "Univers" pill row so
+                    the user can swap atelier without going back to the
+                    selection screen. Switching atelier wipes the components
+                    (handled in the store) — accepted trade-off since each
+                    atelier has a different bead/charm catalog. */}
                 <div className="sticky top-0 z-10 bg-white px-5 md:px-7 pt-5 md:pt-7 pb-4 border-b border-[#EEE9E0]">
+                  <div className="mb-4">
+                    <p className="mb-2 text-[9px] font-black uppercase tracking-widest text-[#A8BED4]">
+                      Univers
+                    </p>
+                    <div className="flex gap-1.5 overflow-x-auto pb-1">
+                      {ATELIERS.map((item) => {
+                        const active = item.id === atelierId;
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => {
+                              if (active) return;
+                              haptic(8);
+                              setAtelier(item.id);
+                              setStep('beads');
+                            }}
+                            className={cn(
+                              'shrink-0 rounded-full border px-3 py-1.5 text-[9px] font-black uppercase tracking-widest transition-colors',
+                              active
+                                ? 'border-[#2D3748] bg-[#2D3748] text-white'
+                                : 'border-[#EEE9E0] bg-[#F8F4ED] text-[#718096] hover:border-[#3D5A73] hover:text-[#2D3748]',
+                            )}
+                          >
+                            {item.id === 'atelier_bracelet_bar'
+                              ? 'Essentiel'
+                              : item.id === 'atelier_kawaii'
+                                ? 'Kawaii'
+                                : 'Classique'}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                   <div
                     className={cn(
                       'grid gap-2',
@@ -734,6 +813,33 @@ export function Configurator() {
           </div>
         </div>
 
+        {/* ─── MA COMPOSITION ─── horizontal tray of placed pieces with
+            reorder/remove controls. Surfaces only when at least one piece
+            is on the cord (or a figurine is attached) — otherwise the
+            empty placeholder feels redundant with the empty bracelet
+            preview above. */}
+        {(components.length > 0 || figurine) && (
+          <div className="mt-4">
+            <CompositionTray
+              components={components}
+              figurine={figurine}
+              selectedSlotId={selectedComponent}
+              onSelect={(slotId) => {
+                haptic(4);
+                select(slotId === selectedComponent ? null : slotId);
+              }}
+              onMove={(from, to) => {
+                haptic(4);
+                moveComponent(from, to);
+              }}
+              onRemove={(slotId) => {
+                haptic(8);
+                removeComponent(slotId);
+              }}
+            />
+          </div>
+        )}
+
         {/* ─── SHARE PREVIEW (carte partagée) ─── */}
         <div className="mt-4">
           <SharePreview
@@ -744,13 +850,54 @@ export function Configurator() {
           />
         </div>
 
+        {/* ─── FULFILLMENT MODE ─── assembled-Paris vs DIY kit. Sits right
+            above the cart row so the choice is visible at the same scroll
+            depth as the price + Ajouter au panier button. Wording matches
+            Dany's branch verbatim. Hidden during a gift redemption — the
+            sender's chosen mode is already baked into the gift card. */}
+        {!activeRedemptionCode && (
+          <div className="mt-6 md:mt-8 rounded-[1.5rem] border border-[#EEE9E0] bg-white p-4 md:p-5 shadow-sm">
+            <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-[#A8BED4]">
+              Assemblage
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {FULFILLMENT_OPTIONS.map((option) => {
+                const active = fulfillmentMode === option.id;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => {
+                      haptic(4);
+                      setFulfillmentMode(option.id);
+                    }}
+                    className={cn(
+                      'rounded-xl border p-3 text-left transition-colors',
+                      active
+                        ? 'border-[#3D5A73] bg-white text-[#2D3748] shadow-sm'
+                        : 'border-[#EEE9E0] bg-[#FBF8F2] text-[#718096] hover:border-[#A8BED4] hover:text-[#2D3748]',
+                    )}
+                  >
+                    <span className="block text-[10px] font-black uppercase tracking-widest">
+                      {option.label}
+                    </span>
+                    <span className="mt-1 block text-[12px] font-semibold italic leading-relaxed">
+                      {option.detail}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* ─── ACTION ROW ─── primary CTA depends on context :
             - normal : "Ajouter au panier"
             - gift redemption : "Confirmer ce cadeau" (locks the bracelet for
               the artisan; no payment since the sender already paid).
             The "Offrir" button is hidden during redemption — the recipient
             already has a gift, they don't need to make a new one. */}
-        <div className="mt-6 md:mt-8 grid sm:grid-cols-[1fr_auto_auto_auto] gap-3 items-stretch bg-[#F5F0E8] rounded-[1.5rem] p-4 md:p-5 border border-[#EEE9E0]">
+        <div className="mt-3 md:mt-4 grid sm:grid-cols-[1fr_auto_auto_auto] gap-3 items-stretch bg-[#F5F0E8] rounded-[1.5rem] p-4 md:p-5 border border-[#EEE9E0]">
           <div className="flex items-center justify-between gap-3 px-2 sm:px-4">
             <div>
               <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-[#A8BED4] mb-1">

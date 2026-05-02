@@ -47,5 +47,8 @@
   },
   "overrides": {
     "postcss": "8.5.10"
+  },
+  "optionalDependencies": {
+    "@rolldown/binding-win32-x64-msvc": "^1.0.0-rc.17"
   }
 }

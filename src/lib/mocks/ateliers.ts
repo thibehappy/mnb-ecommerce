@@ -76,9 +76,9 @@ const PICK_SIZES = [
  * Sizing :
  *   - Bracelet Bar / Classique : `user-pick` (S 15 cm / M 17 cm / L 19 cm + perso).
  *     Le total des sizeMm des composants doit égaler sizeCm × 10 mm.
- *   - Kawaii : `fixed-range` 290–330 mm (fil de fer mémoire). L'utilisateur ne
- *     choisit pas de taille — il peut ajouter des perles tant que le total reste
- *     dans la fourchette.
+ *   - Kawaii : `fixed-range` 280–300 mm (fil de fer mémoire, ~29 cm ±1).
+ *     L'utilisateur ne choisit pas de taille — il peut ajouter des perles tant
+ *     que le total reste dans la fourchette.
  */
 export const ATELIERS: Atelier[] = [
   {
@@ -108,7 +108,7 @@ export const ATELIERS: Atelier[] = [
       'Fil de fer mémoire à composer avec des perles pastel haut de gamme et jusqu’à 1 figurine kawaii — Sanrio (Hello Kitty, Cinnamoroll) ou Disney (Mickey, Stitch) au choix.',
     image: '/photos/atelier-kawaii.jpg',
     wireType: 'Fil de fer mémoire',
-    sizing: { mode: 'fixed-range', minMm: 290, maxMm: 330 },
+    sizing: { mode: 'fixed-range', minMm: 280, maxMm: 300 },
     allowedBeadFamilies: ENTRY_BEAD_FAMILIES,
     allowedCharmCategories: KAWAII_FIGURINES,
     allowCharms: true,
@@ -125,7 +125,7 @@ export const ATELIERS: Atelier[] = [
     tagline: 'Notre collection complète, sans limite',
     description:
       'Fil élastique premium à composer dans toute notre collection : pierres semi-précieuses, perles, et l’ensemble de nos charms. L’atelier sans contrainte.',
-    image: '/photos/atelier-bracelet-bar.jpg',
+    image: '/photos/atelier-mnb.jpg',
     wireType: 'Fil élastique',
     sizing: { mode: 'user-pick' },
     allowedBeadFamilies: STANDARD_BEAD_FAMILIES,

@@ -3,30 +3,21 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
-  Camera,
   Check,
   Copy,
   Gift,
-  Globe2,
-  Heart,
-  MessageCircle,
   Minus,
   PackageCheck,
   Plus,
   RotateCcw,
-  Save,
   Share2,
   ShoppingBag,
-  Sparkles,
   Trash2,
-  Users,
-  Wand2,
   X,
   ZoomIn,
   ZoomOut,
-  type LucideIcon,
 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   useConfigurator,
   useConfiguratorPrice,
@@ -42,25 +33,22 @@ import {
 } from '@/lib/store/configurator';
 import { useCart } from '@/lib/store/cart';
 import { ATELIER_BY_ID } from '@/lib/mocks/ateliers';
-import { BEAD_BY_ID, BEADS } from '@/lib/mocks/beads';
 import { BraceletPreview, type BraceletPreviewHandle } from './BraceletPreview';
 import { BeadPicker } from './BeadPicker';
 import { CharmPicker } from './CharmPicker';
 import { InspireButton } from './InspireButton';
 import { DragGhost } from './DragGhost';
 import { SharePreview } from './SharePreview';
-import { CreationCoach } from './CreationCoach';
-import { DuoSplitPreview } from './DuoSplitPreview';
-import { CompositionTray } from './CompositionTray';
 import { StoneSwatch } from '@/components/ui/StoneSwatch';
 import { CharmGlyph } from '@/components/ui/CharmGlyph';
 import { beadPhotoZoom } from '@/lib/utils/bead-display';
-import { formatCmFromMm, formatPrice, uid } from '@/lib/utils/format';
+import { formatCmFromMm, formatPrice } from '@/lib/utils/format';
 import { cn } from '@/lib/utils/cn';
 import { atelierSound, haptic, successMoment } from '@/lib/utils/feedback';
 import { encodeBraceletDesign } from '@/lib/utils/share-design';
-import { analyzeBraceletDesign, type CoachAction } from '@/lib/harmony/coach';
-import { moodLabel, type Mood } from '@/lib/harmony/rules';
+import { useGiftCards } from '@/lib/store/gift-cards';
+import { GiftModal } from '@/components/gifts/GiftModal';
+import { useGallery } from '@/lib/store/gallery';
 
 const TABS = [
   { id: 'beads' as const, label: 'Perles' },
@@ -79,240 +67,7 @@ interface PaletteDrag {
 
 const DRAG_THRESHOLD = 5;
 
-type StudioAudience = 'self' | 'gift' | 'friends' | 'couple';
-type StudioIntent = 'memory' | 'energy' | 'minimal' | 'viral';
-type RemixFilter = 'all' | 'trending' | 'gift' | 'duo' | 'minimal' | 'kawaii';
-
-const STUDIO_AUDIENCES: Array<{
-  id: StudioAudience;
-  label: string;
-  icon: LucideIcon;
-}> = [
-  { id: 'self', label: 'Moi', icon: Heart },
-  { id: 'gift', label: 'Cadeau', icon: Gift },
-  { id: 'friends', label: 'Amies', icon: Users },
-  { id: 'couple', label: 'Duo', icon: Heart },
-];
-
-const STUDIO_INTENTS: Array<{
-  id: StudioIntent;
-  label: string;
-  mood: Mood;
-  intention: string;
-}> = [
-  {
-    id: 'memory',
-    label: 'Souvenir',
-    mood: 'jardin',
-    intention: 'Un souvenir à porter tous les jours.',
-  },
-  {
-    id: 'energy',
-    label: 'Énergie',
-    mood: 'mystique',
-    intention: 'Une intention douce, protectrice et lumineuse.',
-  },
-  {
-    id: 'minimal',
-    label: 'Minimal',
-    mood: 'minimaliste',
-    intention: 'Une pièce discrète, nette et intemporelle.',
-  },
-  {
-    id: 'viral',
-    label: 'TikTok',
-    mood: 'kawaii',
-    intention: 'Une composition joyeuse, expressive et prête à partager.',
-  },
-];
-
-const WORLD_REMIXES: Array<{
-  id: string;
-  title: string;
-  mood: Mood;
-  audience: StudioAudience;
-  filter: Exclude<RemixFilter, 'all'>;
-  intention: string;
-  creator: string;
-  city: string;
-  story: string;
-  remixes: number;
-  likes: number;
-  colors: string[];
-}> = [
-  {
-    id: 'riviera',
-    title: 'Riviera 17',
-    mood: 'jardin',
-    audience: 'self',
-    filter: 'trending',
-    intention: 'Un été bleu-vert, façonné à Paris.',
-    creator: 'Atelier Louvre',
-    city: 'Paris',
-    story: 'Bleus doux, nacre et vert tendre pour une vibe vacances propres.',
-    remixes: 428,
-    likes: 1900,
-    colors: ['#7CADA6', '#F5EDE0', '#9BC4A8'],
-  },
-  {
-    id: 'midnight',
-    title: 'Midnight Gift',
-    mood: 'nuit',
-    audience: 'gift',
-    filter: 'gift',
-    intention: 'Un cadeau calme, profond, presque secret.',
-    creator: 'MNB Studio',
-    city: 'New York',
-    story: 'Contraste sombre, touches lunaires, parfait pour un cadeau élégant.',
-    remixes: 316,
-    likes: 1240,
-    colors: ['#1A1A1A', '#3B5A7A', '#DCD4CC'],
-  },
-  {
-    id: 'soft-power',
-    title: 'Soft Power',
-    mood: 'romantique',
-    audience: 'friends',
-    filter: 'kawaii',
-    intention: 'Une douceur assumée, à porter en accumulation.',
-    creator: 'Camille',
-    city: 'Tokyo',
-    story: 'Pastel, douceur, perles lumineuses : le remix très partageable.',
-    remixes: 611,
-    likes: 2800,
-    colors: ['#D4A8A0', '#F5EDE0', '#8B6F9B'],
-  },
-  {
-    id: 'solar-club',
-    title: 'Solar Club',
-    mood: 'solaire',
-    audience: 'couple',
-    filter: 'duo',
-    intention: 'Une capsule chaude et solaire, faite pour rayonner.',
-    creator: 'Nina & Lou',
-    city: 'Nice',
-    story: 'Un bracelet à splitter en duo, très chaud, très été.',
-    remixes: 274,
-    likes: 980,
-    colors: ['#B8823C', '#E89060', '#D4A855'],
-  },
-  {
-    id: 'quiet-pearl',
-    title: 'Quiet Pearl',
-    mood: 'minimaliste',
-    audience: 'self',
-    filter: 'minimal',
-    intention: 'Une signature simple, lumineuse, jamais trop visible.',
-    creator: 'Mina',
-    city: 'Seoul',
-    story: 'Peu de bruit, beaucoup de présence : la version quiet luxury.',
-    remixes: 189,
-    likes: 770,
-    colors: ['#F5EDE0', '#DCD4CC', '#1A1A1A'],
-  },
-  {
-    id: 'mystic-note',
-    title: 'Mystic Note',
-    mood: 'mystique',
-    audience: 'gift',
-    filter: 'trending',
-    intention: 'Une intention douce, protectrice et presque talisman.',
-    creator: 'Léna',
-    city: 'Los Angeles',
-    story: 'Améthyste, reflets sombres et énergie talisman.',
-    remixes: 352,
-    likes: 1450,
-    colors: ['#8B6F9B', '#1E1A1A', '#88B5A8'],
-  },
-];
-
-const REMIX_FILTERS: Array<{ id: RemixFilter; label: string }> = [
-  { id: 'all', label: 'Tous' },
-  { id: 'trending', label: 'Tendance' },
-  { id: 'gift', label: 'Cadeau' },
-  { id: 'duo', label: 'Duo' },
-  { id: 'minimal', label: 'Minimal' },
-  { id: 'kawaii', label: 'Kawaii' },
-];
-
-function moodForGuide(audience: StudioAudience, intent: StudioIntent): Mood {
-  if (audience === 'gift' && intent === 'memory') return 'romantique';
-  if (audience === 'friends' && intent === 'viral') return 'kawaii';
-  if (audience === 'couple' && intent === 'minimal') return 'minimaliste';
-  return STUDIO_INTENTS.find((item) => item.id === intent)?.mood ?? 'jardin';
-}
-
-function titleForGuide(audience: StudioAudience, intent: StudioIntent): string {
-  const audienceLabel = STUDIO_AUDIENCES.find((item) => item.id === audience)?.label ?? 'Moi';
-  const intentLabel = STUDIO_INTENTS.find((item) => item.id === intent)?.label ?? 'Souvenir';
-  return `${intentLabel} ${audienceLabel}`;
-}
-
-function moodFromRgb(r: number, g: number, b: number): Mood {
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  const light = (max + min) / 2;
-  const saturation = max === min ? 0 : (max - min) / (255 - Math.abs(max + min - 255));
-  const warm = r * 1.08 + g * 0.55 - b * 0.72;
-  const cool = b * 0.95 + g * 0.55 - r * 0.7;
-
-  if (saturation < 0.16 && light < 110) return 'minimaliste';
-  if (b > r + 28 && cool > 120) return light < 120 ? 'nuit' : 'jardin';
-  if (r > 150 && b > 120 && Math.abs(r - b) < 70) return 'romantique';
-  if (r > 130 && b > 120 && b > g + 15) return 'mystique';
-  if (warm > 150) return 'solaire';
-  if (g > r && g > b - 10) return 'jardin';
-  return 'kawaii';
-}
-
-async function moodFromImageFile(file: File): Promise<Mood> {
-  const url = URL.createObjectURL(file);
-  try {
-    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = reject;
-      img.src = url;
-    });
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    if (!ctx) return 'jardin';
-    canvas.width = 32;
-    canvas.height = 32;
-    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-    const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-    let r = 0;
-    let g = 0;
-    let b = 0;
-    let count = 0;
-    for (let i = 0; i < pixels.length; i += 4) {
-      const alpha = pixels[i + 3] ?? 0;
-      if (alpha < 20) continue;
-      r += pixels[i] ?? 0;
-      g += pixels[i + 1] ?? 0;
-      b += pixels[i + 2] ?? 0;
-      count++;
-    }
-    if (count === 0) return 'jardin';
-    return moodFromRgb(r / count, g / count, b / count);
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
-
-function completionScore(
-  bead: (typeof BEADS)[number],
-  gapMm: number,
-  preferredFamily?: string,
-  previousRefId?: string,
-): number {
-  let score = Math.abs(gapMm - bead.sizeMm);
-  if (preferredFamily && bead.family === preferredFamily) score -= 4;
-  if (previousRefId === bead.id) score += 2;
-  if (gapMm > 18 && bead.sizeMm >= 8) score -= 1.5;
-  if (gapMm <= 10 && bead.sizeMm <= gapMm) score -= 1;
-  return score;
-}
+const DEFAULT_BRACELET_NAME = 'Ma création';
 
 export function Configurator() {
   const {
@@ -332,35 +87,45 @@ export function Configurator() {
     insertBeadAt,
     insertCharmAt,
     clearComponents,
-    replaceComponents,
     reset,
-    save,
-    loadDesign,
-    applyInspired,
   } = useConfigurator();
-  const addCustom = useCart((s) => s.addCustom);
-  const savedDesigns = useConfigurator((s) => s.savedDesigns);
+  // Pulled separately because they're not part of the broad destructure above
+  // — the bracelet name is persisted in the store as `draftTitle` so that it
+  // survives reloads and is hydrated when a shared `?design=...` URL loads.
   const draftTitle = useConfigurator((s) => s.draftTitle);
-  const draftIntention = useConfigurator((s) => s.draftIntention);
+  const setDraftMeta = useConfigurator((s) => s.setDraftMeta);
+  const addCustom = useCart((s) => s.addCustom);
   const price = useConfiguratorPrice();
   const atelier = ATELIER_BY_ID[atelierId];
 
+  // Gift card state — `activeRedemptionCode` is set when the user lands here
+  // via a `?gift=…` link or types a code on the atelier screen. While it's
+  // non-null we shift the language of the primary CTA from "add to cart" to
+  // "confirm gift", and surface a banner reminding the user they're acting
+  // on someone else's gift.
+  const activeRedemptionCode = useGiftCards((s) => s.activeRedemptionCode);
+  const activeGiftCard = useGiftCards((s) =>
+    s.activeRedemptionCode ? s.cards.find((c) => c.code === s.activeRedemptionCode) : undefined,
+  );
+  const updateDesignedGift = useGiftCards((s) => s.updateDesignedGift);
+  const markGiftRedeemed = useGiftCards((s) => s.markRedeemed);
+  const endRedemption = useGiftCards((s) => s.endRedemption);
+  // Each share also publishes to the public gallery so the community feed
+  // grows organically. Recipients of a gift redemption don't publish — they
+  // didn't compose it, they're just acting on someone else's design.
+  const publishToGallery = useGallery((s) => s.publish);
+
   const [justAddedCart, setJustAddedCart] = useState(false);
-  const [creationTitle, setCreationTitle] = useState('');
-  const [intention, setIntention] = useState('');
-  const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const [shareStatus, setShareStatus] = useState<string | null>(null);
-  const [studioStatus, setStudioStatus] = useState<string | null>(null);
-  const [moodboardStatus, setMoodboardStatus] = useState<string | null>(null);
-  const [studioAudience, setStudioAudience] = useState<StudioAudience>('self');
-  const [studioIntent, setStudioIntent] = useState<StudioIntent>('memory');
-  const [remixFilter, setRemixFilter] = useState<RemixFilter>('all');
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [shareName, setShareName] = useState('');
+  const [giftModalOpen, setGiftModalOpen] = useState(false);
+  const [giftRedeemedConfirm, setGiftRedeemedConfirm] = useState(false);
   const [unboxingOpen, setUnboxingOpen] = useState(false);
   const [customStepperOpen, setCustomStepperOpen] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const addToCartRef = useRef<HTMLDivElement>(null);
-  const titleInputRef = useRef<HTMLInputElement>(null);
   const braceletRef = useRef<BraceletPreviewHandle>(null);
 
   const ZOOM_STEP = 1.2;
@@ -387,11 +152,6 @@ export function Configurator() {
     setPan({ x: 0, y: 0 });
   }, [atelierId]);
 
-  useEffect(() => {
-    if (draftTitle) setCreationTitle(draftTitle);
-    if (draftIntention) setIntention(draftIntention);
-  }, [draftTitle, draftIntention]);
-
   // Palette drag state — owned at this level so we can dispatch to bracelet
   const [paletteDrag, setPaletteDrag] = useState<PaletteDrag | null>(null);
   // Mirror in a ref so handlers read the freshest value without re-binding
@@ -410,8 +170,6 @@ export function Configurator() {
   const lengthMm = totalLengthMm(components);
   const fit = getSizeFit(atelierId, sizeCm, components);
   const canOrder = fit.status === 'ready';
-  const creationName = creationTitle.trim() || 'Ma création';
-  const fitTone = fit.status === 'ready' ? 'ready' : fit.status === 'too-long' ? 'danger' : 'quiet';
   const fitMessage =
     fit.status === 'empty'
       ? 'Ajoutez vos premières perles pour composer le bracelet'
@@ -420,20 +178,6 @@ export function Configurator() {
         : fit.status === 'too-long'
           ? `Trop long de ${formatCmFromMm(fit.overflowMm)} · retirez une perle`
           : `Encore ${formatCmFromMm(fit.remainingMm)} pour une taille parfaite`;
-  const filteredRemixes = useMemo(
-    () =>
-      remixFilter === 'all'
-        ? WORLD_REMIXES
-        : WORLD_REMIXES.filter((remix) => remix.filter === remixFilter),
-    [remixFilter],
-  );
-  const coachInsight = analyzeBraceletDesign({
-    components,
-    figurine,
-    fit,
-    title: creationTitle,
-    intention,
-  });
 
   // Listen to global pointer events while dragging from palette
   useEffect(() => {
@@ -484,92 +228,51 @@ export function Configurator() {
     });
   }
 
-  function getCurrentShareDesign(): SharedBraceletDesign {
-    return {
+  function openShareModal() {
+    if (components.length === 0) return;
+    haptic(6);
+    // Pre-fill with the previously chosen name, if any.
+    setShareName(draftTitle);
+    setShareModalOpen(true);
+  }
+
+  async function performShare(rawName: string) {
+    if (components.length === 0 || typeof window === 'undefined') return;
+    const finalName = rawName.trim() || DEFAULT_BRACELET_NAME;
+    setDraftMeta(finalName);
+    const url = new URL(window.location.href);
+    const design: SharedBraceletDesign = {
       atelierId,
       sizeCm,
       sizeLabel,
       components,
       figurine,
-      title: creationName,
-      intention: intention.trim() || undefined,
+      title: finalName,
     };
-  }
+    url.searchParams.set('design', encodeBraceletDesign(design));
+    const shareText = `Regarde mon bracelet "${finalName}" créé chez My Nice Bracelet.`;
 
-  function announceStudio(message: string) {
-    setStudioStatus(message);
-    setTimeout(() => setStudioStatus(null), 2600);
-  }
-
-  function handleGuidedCreation() {
-    const mood = moodForGuide(studioAudience, studioIntent);
-    const intent = STUDIO_INTENTS.find((item) => item.id === studioIntent);
-    applyInspired(mood);
-    atelierSound('stone');
-    haptic([8, 18, 8]);
-    setCreationTitle((current) => current.trim() || titleForGuide(studioAudience, studioIntent));
-    setIntention((current) => current.trim() || intent?.intention || '');
-    setStep('beads');
-    announceStudio(`Style ${moodLabel(mood)} généré`);
-  }
-
-  function handleWorldRemix(remix: (typeof WORLD_REMIXES)[number]) {
-    applyInspired(remix.mood);
-    setCreationTitle(`Remix · ${remix.title}`);
-    setIntention(remix.intention);
-    setStudioAudience(remix.audience);
-    setStep('beads');
-    atelierSound('stone');
-    haptic([8, 18, 8]);
-    announceStudio(`${remix.title} remixé`);
-  }
-
-  function handleSavedRemix(id: string, title?: string, savedIntention?: string) {
-    loadDesign(id);
-    setCreationTitle(`Remix · ${title || 'Création'}`);
-    setIntention(savedIntention || intention);
-    setStep('beads');
-    haptic(8);
-    announceStudio('Création reprise');
-  }
-
-  async function handleMoodboardUpload(file?: File) {
-    if (!file) return;
-    setMoodboardStatus('Analyse...');
-    try {
-      const mood = await moodFromImageFile(file);
-      applyInspired(mood);
-      setCreationTitle((current) => current.trim() || `Moodboard · ${moodLabel(mood)}`);
-      setIntention((current) => current.trim() || `Palette inspirée de ${file.name}.`);
-      setMoodboardStatus(`Palette ${moodLabel(mood)}`);
-      setStep('beads');
-      atelierSound('stone');
-      haptic([8, 18, 8]);
-    } catch {
-      setMoodboardStatus('Image non lisible');
+    // Publish to the public gallery — but only when the user composed this
+    // bracelet themselves (not when they're a recipient redeeming someone
+    // else's gift). Otherwise gifts would leak into the public feed even
+    // though the redeemer didn't author the design.
+    if (!activeRedemptionCode) {
+      publishToGallery({
+        title: finalName,
+        // No separate "creator name" input in the share modal — leave
+        // anonymous. The gallery card displays "Anonyme" in that case.
+        atelierId,
+        sizeCm,
+        sizeLabel,
+        components,
+        figurine,
+      });
     }
-    setTimeout(() => setMoodboardStatus(null), 2800);
-  }
-
-  function handleSaveDesign() {
-    if (components.length === 0) return;
-    haptic(8);
-    atelierSound('soft');
-    const design = save(creationName, intention.trim() || undefined);
-    setSaveStatus(`Sauvegardé · ${design.title ?? 'Ma création'}`);
-    setTimeout(() => setSaveStatus(null), 2400);
-  }
-
-  async function handleShareDesign() {
-    if (components.length === 0 || typeof window === 'undefined') return;
-    const url = new URL(window.location.href);
-    url.searchParams.set('design', encodeBraceletDesign(getCurrentShareDesign()));
-    const shareText = `Regarde mon bracelet "${creationName}" créé chez My Nice Bracelet.`;
 
     try {
       if (navigator.share) {
         await navigator.share({
-          title: creationName,
+          title: finalName,
           text: shareText,
           url: url.toString(),
         });
@@ -585,82 +288,10 @@ export function Configurator() {
     setTimeout(() => setShareStatus(null), 2400);
   }
 
-  function handleAutoCompleteBracelet() {
-    if (!atelier || fit.status !== 'too-short') return;
-
-    const familyCounts = new Map<string, number>();
-    for (const component of components) {
-      if (component.kind !== 'bead') continue;
-      const bead = BEAD_BY_ID[component.refId];
-      if (!bead) continue;
-      familyCounts.set(bead.family, (familyCounts.get(bead.family) ?? 0) + 1);
-    }
-    const familyOrder = [...familyCounts.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .map(([family]) => family);
-    const allowedFamilies = atelier.allowedBeadFamilies;
-    const candidates = BEADS.filter(
-      (bead) => allowedFamilies.includes(bead.family) && bead.stock > 0 && bead.sizeMm > 0,
-    );
-    if (candidates.length === 0) return;
-
-    const next = [...components];
-    let total = lengthMm;
-    let guard = 0;
-
-    while (total < fit.minMm - 0.0001 && guard < 80) {
-      const capacity = fit.maxMm - total;
-      const gap = fit.minMm - total;
-      const preferredFamily = familyOrder[next.length % Math.max(1, familyOrder.length)];
-      const possible = candidates.filter((bead) => bead.sizeMm <= capacity + 0.0001);
-      if (possible.length === 0) break;
-
-      const bead = possible
-        .slice()
-        .sort((a, b) => {
-          const aScore = completionScore(a, gap, preferredFamily, next.at(-1)?.refId);
-          const bScore = completionScore(b, gap, preferredFamily, next.at(-1)?.refId);
-          return aScore - bScore;
-        })[0];
-      if (!bead) break;
-
-      next.push({ slotId: uid('s'), kind: 'bead', refId: bead.id });
-      total += bead.sizeMm;
-      guard++;
-    }
-
-    if (next.length === components.length) return;
-    replaceComponents(next);
-    atelierSound('stone');
-    haptic([7, 16, 7]);
-    announceStudio('Longueur complétée');
-  }
-
-  function handleCoachAction(action: CoachAction) {
-    if (action === 'generate') {
-      handleGuidedCreation();
-      return;
-    }
-    if (action === 'complete') {
-      handleAutoCompleteBracelet();
-      return;
-    }
-    if (action === 'name') {
-      titleInputRef.current?.focus();
-      return;
-    }
-    if (action === 'share') {
-      void handleShareDesign();
-    }
-  }
-
   function handleAddToCart() {
     if (!canOrder) return;
-    const design = snapshotConfig(
-      useConfigurator.getState(),
-      creationName,
-      intention.trim() || undefined,
-    );
+    const name = draftTitle || DEFAULT_BRACELET_NAME;
+    const design = snapshotConfig(useConfigurator.getState(), name, undefined);
     addCustom(design, 1);
     const rect = addToCartRef.current?.getBoundingClientRect();
     const origin = rect
@@ -673,6 +304,30 @@ export function Configurator() {
     setJustAddedCart(true);
     setUnboxingOpen(true);
     setTimeout(() => setJustAddedCart(false), 2000);
+  }
+
+  /**
+   * Confirm a gift redemption. The recipient pressed "Confirmer ce cadeau"
+   * after viewing (and optionally tweaking) the bracelet. We :
+   *   1. Snapshot the (possibly tweaked) design back into the gift card so
+   *      the artisan ships exactly what's been confirmed.
+   *   2. Mark the card as redeemed — it becomes read-only afterwards.
+   *   3. Show a brief confirmation moment and clear the active redemption.
+   */
+  function handleConfirmGift() {
+    if (!canOrder || !activeGiftCard) return;
+    const name = draftTitle || activeGiftCard.design?.title || DEFAULT_BRACELET_NAME;
+    const design = snapshotConfig(useConfigurator.getState(), name, undefined);
+    if (activeGiftCard.kind === 'designed' || activeGiftCard.kind === 'open') {
+      updateDesignedGift(activeGiftCard.code, design);
+    }
+    markGiftRedeemed(activeGiftCard.code);
+    successMoment();
+    setGiftRedeemedConfirm(true);
+    setTimeout(() => {
+      setGiftRedeemedConfirm(false);
+      endRedemption();
+    }, 2400);
   }
 
   return (
@@ -697,106 +352,47 @@ export function Configurator() {
           </p>
         </div>
 
-        <section className="mb-5 grid xl:grid-cols-[1.25fr_0.75fr] gap-3">
-          <div className="rounded-2xl border border-[#EEE9E0] bg-white p-3 md:p-4 shadow-sm">
+        {/* Active gift redemption banner — surfaces when the recipient
+            arrived via a `?gift=…` link or typed a code. Explains the mode,
+            shows the sender + message, and gives an escape hatch. */}
+        {activeGiftCard && (
+          <div className="mb-5 rounded-2xl border border-[#3D5A73] bg-[#F5F0E8] p-3 md:p-4 shadow-sm">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#3D5A73]">
-                <Wand2 size={14} strokeWidth={2.2} />
-                Studio guidé
-              </div>
-              {studioStatus && (
-                <span className="rounded-full bg-[#EDF7F0] px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-[#244A35]">
-                  {studioStatus}
+              <div className="flex items-start gap-3">
+                <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#3D5A73] text-white">
+                  <Gift size={16} strokeWidth={2.2} />
                 </span>
-              )}
-            </div>
-            <div className="mt-3 grid gap-3 lg:grid-cols-[1fr_1fr_auto]">
-              <div className="grid grid-cols-4 gap-1.5">
-                {STUDIO_AUDIENCES.map((item) => {
-                  const Icon = item.icon;
-                  const active = studioAudience === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => {
-                        haptic(4);
-                        setStudioAudience(item.id);
-                      }}
-                      className={cn(
-                        'inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border px-2 text-[9px] font-black uppercase tracking-widest transition-colors',
-                        active
-                          ? 'border-[#3D5A73] bg-[#3D5A73] text-white'
-                          : 'border-[#EEE9E0] bg-[#F8F4ED] text-[#718096] hover:border-[#A8BED4] hover:text-[#2D3748]',
-                      )}
-                    >
-                      <Icon size={12} strokeWidth={2.2} />
-                      {item.label}
-                    </button>
-                  );
-                })}
-              </div>
-              <div className="grid grid-cols-4 gap-1.5">
-                {STUDIO_INTENTS.map((item) => {
-                  const active = studioIntent === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => {
-                        haptic(4);
-                        setStudioIntent(item.id);
-                      }}
-                      className={cn(
-                        'h-10 rounded-lg border px-2 text-[9px] font-black uppercase tracking-widest transition-colors',
-                        active
-                          ? 'border-[#A4473E] bg-[#FFF1EE] text-[#7A2D25]'
-                          : 'border-[#EEE9E0] bg-[#F8F4ED] text-[#718096] hover:border-[#D4A8A0] hover:text-[#2D3748]',
-                      )}
-                    >
-                      {item.label}
-                    </button>
-                  );
-                })}
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-[#3D5A73]">
+                    Cadeau {activeGiftCard.kind === 'designed' ? 'à valider' : 'à composer'}
+                    {activeGiftCard.senderName ? ` · de la part de ${activeGiftCard.senderName}` : ''}
+                  </p>
+                  <p className="mt-1 font-serif text-[16px] md:text-[18px] font-black uppercase tracking-tight text-[#2D3748]">
+                    {activeGiftCard.kind === 'designed'
+                      ? 'Vous pouvez ajuster ce bracelet ou valider tel quel.'
+                      : 'Composez votre bracelet — il vous est offert.'}
+                  </p>
+                  {activeGiftCard.message && (
+                    <p className="mt-1 text-[12px] font-semibold italic text-[#718096]">
+                      « {activeGiftCard.message} »
+                    </p>
+                  )}
+                </div>
               </div>
               <button
                 type="button"
-                onClick={handleGuidedCreation}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#2D3748] px-4 text-[10px] font-black uppercase tracking-widest text-white shadow-sm transition-colors hover:bg-[#3D5A73]"
+                onClick={() => {
+                  haptic(6);
+                  endRedemption();
+                }}
+                className="inline-flex h-9 items-center gap-2 self-start rounded-full border border-[#EEE9E0] bg-white px-3 text-[10px] font-black uppercase tracking-widest text-[#718096] transition-colors hover:border-[#A4473E] hover:text-[#A4473E]"
               >
-                <Sparkles size={13} strokeWidth={2.2} />
-                Créer
+                <X size={12} strokeWidth={2.2} />
+                Quitter le mode cadeau
               </button>
             </div>
           </div>
-
-          <div className="rounded-2xl border border-[#D9E4D7] bg-[#F4FAF4] p-3 md:p-4 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#244A35]">
-                <Camera size={14} strokeWidth={2.2} />
-                Moodboard
-              </div>
-              {moodboardStatus && (
-                <span className="rounded-full bg-white/85 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-[#244A35]">
-                  {moodboardStatus}
-                </span>
-              )}
-            </div>
-            <label className="mt-3 inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-[#BFD9C7] bg-white px-4 text-[10px] font-black uppercase tracking-widest text-[#244A35] transition-colors hover:border-[#244A35]">
-              <Camera size={13} strokeWidth={2.2} />
-              Image vers bracelet
-              <input
-                type="file"
-                accept="image/*"
-                className="sr-only"
-                onChange={(event) => {
-                  void handleMoodboardUpload(event.target.files?.[0]);
-                  event.currentTarget.value = '';
-                }}
-              />
-            </label>
-          </div>
-        </section>
+        )}
 
         {/* ─── MAIN CARD : warm canvas containing the bracelet AND a floating palette ─── */}
         <div className="relative rounded-[2rem] md:rounded-[3rem] overflow-hidden border border-[#EEE9E0] shadow-md">
@@ -1138,284 +734,23 @@ export function Configurator() {
           </div>
         </div>
 
-        <CompositionTray
-          components={components}
-          figurine={figurine}
-          selectedSlotId={selectedComponent}
-          onSelect={select}
-          onMove={(from, to) => {
-            haptic(4);
-            moveComponent(from, to);
-          }}
-          onRemove={(slotId) => {
-            haptic(8);
-            removeComponent(slotId);
-          }}
-        />
-
-        {/* ─── CREATION RITUAL ─── */}
-        <div className="mt-6 grid lg:grid-cols-[1.1fr_0.9fr] gap-3">
-          <div className="bg-white border border-[#EEE9E0] rounded-xl p-4 md:p-5 shadow-sm">
-            <div className="flex items-center justify-between gap-3 mb-3">
-              <div className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#3D5A73]">
-                <Heart size={14} strokeWidth={2} />
-                Signature
-              </div>
-              <span className="text-[9px] font-black uppercase tracking-widest text-[#A8BED4]">
-                {savedDesigns.length}/24
-              </span>
-            </div>
-            <div className="grid sm:grid-cols-[1fr_auto_auto] gap-2">
-              <label className="sr-only" htmlFor="creation-title">
-                Nom du bracelet
-              </label>
-              <input
-                id="creation-title"
-                ref={titleInputRef}
-                value={creationTitle}
-                onChange={(e) => setCreationTitle(e.target.value)}
-                placeholder="Nom du bracelet"
-                maxLength={48}
-                className="h-11 rounded-lg border border-[#EEE9E0] bg-[#F5F0E8] px-3 text-[13px] font-semibold text-[#2D3748] outline-none transition-colors placeholder:text-[#A8BED4] focus:border-[#3D5A73] focus:bg-white"
-              />
-              <button
-                type="button"
-                onClick={handleSaveDesign}
-                disabled={components.length === 0}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-[#EEE9E0] bg-white px-4 text-[10px] font-black uppercase tracking-widest text-[#3D5A73] transition-colors hover:border-[#3D5A73] hover:text-[#2D3748] disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <Save size={13} strokeWidth={2.2} />
-                Sauver
-              </button>
-              <button
-                type="button"
-                onClick={handleShareDesign}
-                disabled={components.length === 0}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#2D3748] px-4 text-[10px] font-black uppercase tracking-widest text-white transition-colors hover:bg-[#3D5A73] disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {shareStatus === 'Lien copié' ? (
-                  <Copy size={13} strokeWidth={2.2} />
-                ) : (
-                  <Share2 size={13} strokeWidth={2.2} />
-                )}
-                Partager
-              </button>
-            </div>
-            <div className="mt-2 grid gap-2 sm:grid-cols-[auto_1fr] sm:items-center">
-              <span className="hidden h-11 w-11 items-center justify-center rounded-lg bg-[#F5F0E8] text-[#3D5A73] sm:inline-flex">
-                <MessageCircle size={15} strokeWidth={2.1} />
-              </span>
-              <label className="sr-only" htmlFor="creation-intention">
-                Message pour le colis
-              </label>
-              <input
-                id="creation-intention"
-                value={intention}
-                onChange={(e) => setIntention(e.target.value)}
-                placeholder="Message à glisser dans le colis"
-                maxLength={96}
-                className="h-11 rounded-lg border border-[#EEE9E0] bg-white px-3 text-[13px] font-semibold text-[#2D3748] outline-none transition-colors placeholder:text-[#A8BED4] focus:border-[#3D5A73]"
-              />
-            </div>
-            {(saveStatus || shareStatus) && (
-              <p className="mt-2 text-[11px] font-semibold text-[#718096]">
-                {saveStatus ?? shareStatus}
-              </p>
-            )}
-          </div>
-
-          <div
-            className={cn(
-              'border rounded-xl p-4 md:p-5 shadow-sm',
-              fitTone === 'ready' && 'bg-[#EDF7F0] border-[#BFD9C7] text-[#244A35]',
-              fitTone === 'danger' && 'bg-[#FFF1EE] border-[#E5B8AE] text-[#7A2D25]',
-              fitTone === 'quiet' && 'bg-white border-[#EEE9E0] text-[#2D3748]',
-            )}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest opacity-70">
-                  Ajustement
-                </p>
-                <p className="mt-1 font-serif text-[18px] md:text-[21px] font-black uppercase tracking-tight leading-tight">
-                  {fitMessage}
-                </p>
-              </div>
-              <span className="shrink-0 rounded-full bg-white/75 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest tabular-nums">
-                {formatCmFromMm(lengthMm)} / {formatCmFromMm(targetMm)}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* ─── ATELIER COACH ─── */}
-        <div className="mt-4">
-          <CreationCoach insight={coachInsight} onAction={handleCoachAction} />
-        </div>
-
-        {/* ─── SHARE PREVIEW ─── */}
+        {/* ─── SHARE PREVIEW (carte partagée) ─── */}
         <div className="mt-4">
           <SharePreview
             components={components}
             figurine={figurine}
-            title={creationName}
-            intention={intention.trim() || undefined}
-            lengthMm={lengthMm}
-            targetMm={targetMm}
-            price={price}
+            title={draftTitle || DEFAULT_BRACELET_NAME}
+            sizeCm={sizeCm}
           />
         </div>
 
-        {/* ─── DUO SPLIT ─── */}
-        <div className="mt-4">
-          <DuoSplitPreview
-            components={components}
-            figurine={figurine}
-            title={creationName}
-            price={price}
-            onShare={() => {
-              void handleShareDesign();
-            }}
-          />
-        </div>
-
-        {/* ─── SOCIAL REMIX ─── */}
-        <div className="mt-4 grid xl:grid-cols-[1fr_0.8fr] gap-3">
-          <div className="rounded-2xl border border-[#EEE9E0] bg-white p-4 md:p-5 shadow-sm">
-            <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-              <div>
-                <div className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#3D5A73]">
-                  <Globe2 size={14} strokeWidth={2.1} />
-                  Galerie remix
-                </div>
-                <p className="mt-1 text-[12px] font-semibold italic text-[#718096]">
-                  Des recettes mondiales à reprendre, personnaliser et partager.
-                </p>
-              </div>
-              <span className="w-fit rounded-full bg-[#F5F0E8] px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-[#718096]">
-                Paris · Global · {WORLD_REMIXES.length} drops
-              </span>
-            </div>
-            <div className="mb-4 flex gap-1.5 overflow-x-auto pb-1">
-              {REMIX_FILTERS.map((filter) => (
-                <button
-                  key={filter.id}
-                  type="button"
-                  onClick={() => {
-                    haptic(4);
-                    setRemixFilter(filter.id);
-                  }}
-                  className={cn(
-                    'shrink-0 rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition-colors',
-                    remixFilter === filter.id
-                      ? 'bg-[#2D3748] text-white'
-                      : 'border border-[#EEE9E0] bg-white text-[#718096] hover:border-[#3D5A73] hover:text-[#2D3748]',
-                  )}
-                >
-                  {filter.label}
-                </button>
-              ))}
-            </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              {filteredRemixes.map((remix) => (
-                <button
-                  key={remix.id}
-                  type="button"
-                  onClick={() => handleWorldRemix(remix)}
-                  className="group overflow-hidden rounded-xl border border-[#EEE9E0] bg-[#FBF8F2] text-left transition-all hover:-translate-y-0.5 hover:border-[#3D5A73] hover:bg-white hover:shadow-md"
-                >
-                  <div
-                    className="h-2"
-                    style={{
-                      background: `linear-gradient(90deg, ${remix.colors.join(', ')})`,
-                    }}
-                  />
-                  <div className="p-3.5">
-                    <div className="mb-3 flex items-start justify-between gap-3">
-                      <div className="flex -space-x-1.5">
-                        {remix.colors.map((hex, index) => (
-                          <span
-                            key={`${remix.id}-${hex}-${index}`}
-                            className="h-8 w-8 rounded-full border-2 border-white shadow-sm"
-                            style={{ backgroundColor: hex }}
-                          />
-                        ))}
-                      </div>
-                      <span className="rounded-full bg-white px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-[#3D5A73] shadow-sm">
-                        {moodLabel(remix.mood)}
-                      </span>
-                    </div>
-                    <p className="font-serif text-[18px] font-black uppercase leading-none tracking-tight text-[#2D3748]">
-                      {remix.title}
-                    </p>
-                    <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-[#A8BED4]">
-                      {remix.creator} · {remix.city}
-                    </p>
-                    <p className="mt-2 line-clamp-2 min-h-[34px] text-[12px] font-semibold italic leading-relaxed text-[#718096]">
-                      {remix.story}
-                    </p>
-                    <div className="mt-3 grid grid-cols-[1fr_1fr_auto] items-center gap-2">
-                      <span className="rounded-lg bg-white px-2.5 py-2 text-[9px] font-black uppercase tracking-widest text-[#718096]">
-                        {remix.remixes} remix
-                      </span>
-                      <span className="rounded-lg bg-white px-2.5 py-2 text-[9px] font-black uppercase tracking-widest text-[#718096]">
-                        {(remix.likes / 1000).toFixed(1).replace('.', ',')}k likes
-                      </span>
-                      <span className="inline-flex items-center gap-1.5 rounded-lg bg-[#2D3748] px-3 py-2 text-[9px] font-black uppercase tracking-widest text-white">
-                        <Wand2 size={11} strokeWidth={2.2} />
-                        Ouvrir
-                      </span>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-[#D9E4F0] bg-[#F4F8FB] p-4 md:p-5 shadow-sm">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#3D5A73]">
-                <Save size={14} strokeWidth={2.1} />
-                Vos designs
-              </div>
-              <span className="rounded-full bg-white/85 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-[#718096]">
-                {savedDesigns.length}/24
-              </span>
-            </div>
-            {savedDesigns.length === 0 ? (
-              <div className="flex min-h-[138px] items-center justify-center rounded-xl border border-dashed border-[#BFD0DF] bg-white/55 px-4 text-center text-[12px] font-semibold italic text-[#718096]">
-                Sauvegardez une création pour la reprendre ou la partager.
-              </div>
-            ) : (
-              <div className="grid max-h-[180px] gap-2 overflow-y-auto pr-1">
-                {savedDesigns.slice(0, 5).map((design) => (
-                  <button
-                    key={design.id}
-                    type="button"
-                    onClick={() => handleSavedRemix(design.id, design.title, design.intention)}
-                    className="grid grid-cols-[1fr_auto] items-center gap-3 rounded-xl border border-white/80 bg-white p-3 text-left shadow-sm transition-colors hover:border-[#3D5A73]"
-                  >
-                    <span className="min-w-0">
-                      <span className="block truncate font-serif text-[14px] font-black uppercase tracking-tight text-[#2D3748]">
-                        {design.title || 'Ma création'}
-                      </span>
-                      <span className="block text-[10px] font-black uppercase tracking-widest text-[#A8BED4]">
-                        {design.components.length} pièces · {formatPrice(design.price)}
-                      </span>
-                    </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-lg bg-[#F5F0E8] px-3 py-2 text-[9px] font-black uppercase tracking-widest text-[#3D5A73]">
-                      <Wand2 size={11} strokeWidth={2.2} />
-                      Remix
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* ─── ADD TO CART ─── */}
-        <div className="mt-6 md:mt-8 grid sm:grid-cols-[1fr_auto] gap-3 items-stretch bg-[#F5F0E8] rounded-[1.5rem] p-4 md:p-5 border border-[#EEE9E0]">
+        {/* ─── ACTION ROW ─── primary CTA depends on context :
+            - normal : "Ajouter au panier"
+            - gift redemption : "Confirmer ce cadeau" (locks the bracelet for
+              the artisan; no payment since the sender already paid).
+            The "Offrir" button is hidden during redemption — the recipient
+            already has a gift, they don't need to make a new one. */}
+        <div className="mt-6 md:mt-8 grid sm:grid-cols-[1fr_auto_auto_auto] gap-3 items-stretch bg-[#F5F0E8] rounded-[1.5rem] p-4 md:p-5 border border-[#EEE9E0]">
           <div className="flex items-center justify-between gap-3 px-2 sm:px-4">
             <div>
               <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-[#A8BED4] mb-1">
@@ -1428,28 +763,77 @@ export function Configurator() {
               </p>
             </div>
             <p className="font-serif text-[24px] md:text-[28px] font-black tracking-tighter text-[#2D3748] tabular-nums shrink-0">
-              {formatPrice(price)}
+              {activeRedemptionCode ? 'Offert' : formatPrice(price)}
             </p>
           </div>
-          <div ref={addToCartRef}>
+          <button
+            type="button"
+            onClick={openShareModal}
+            disabled={components.length === 0}
+            className="h-full w-full sm:w-auto px-5 py-4 rounded-xl border border-[#EEE9E0] bg-white text-[11px] md:text-[13px] font-black uppercase tracking-widest text-[#3D5A73] transition-colors hover:border-[#3D5A73] hover:text-[#2D3748] disabled:cursor-not-allowed disabled:opacity-40 inline-flex items-center justify-center gap-2"
+          >
+            {shareStatus === 'Lien copié' ? (
+              <Copy size={14} strokeWidth={2.2} />
+            ) : (
+              <Share2 size={14} strokeWidth={2.2} />
+            )}
+            {shareStatus ?? 'Partager'}
+          </button>
+          {/* "Offrir" — only when not in redemption mode */}
+          {!activeRedemptionCode && (
             <button
               type="button"
-              onClick={handleAddToCart}
-              disabled={!canOrder}
-              className="w-full sm:w-auto h-full px-8 py-4 rounded-xl bg-[#3D5A73] hover:bg-[#2A3F50] text-white text-[11px] md:text-[13px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center justify-center gap-3"
+              onClick={() => {
+                haptic(6);
+                setGiftModalOpen(true);
+              }}
+              disabled={components.length === 0}
+              className="h-full w-full sm:w-auto px-5 py-4 rounded-xl border border-[#EEE9E0] bg-white text-[11px] md:text-[13px] font-black uppercase tracking-widest text-[#3D5A73] transition-colors hover:border-[#3D5A73] hover:text-[#2D3748] disabled:cursor-not-allowed disabled:opacity-40 inline-flex items-center justify-center gap-2"
             >
-              {justAddedCart ? (
-                <>
-                  <Check size={16} strokeWidth={2.5} />
-                  Ajouté
-                </>
-              ) : (
-                <>
-                  <ShoppingBag size={16} strokeWidth={2} />
-                  Ajouter au panier
-                </>
-              )}
+              <Gift size={14} strokeWidth={2.2} />
+              Offrir
             </button>
+          )}
+          <div ref={addToCartRef}>
+            {activeRedemptionCode ? (
+              <button
+                type="button"
+                onClick={handleConfirmGift}
+                disabled={!canOrder}
+                className="w-full sm:w-auto h-full px-8 py-4 rounded-xl bg-[#244A35] hover:bg-[#1a3525] text-white text-[11px] md:text-[13px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center justify-center gap-3"
+              >
+                {giftRedeemedConfirm ? (
+                  <>
+                    <Check size={16} strokeWidth={2.5} />
+                    Confirmé
+                  </>
+                ) : (
+                  <>
+                    <Gift size={16} strokeWidth={2} />
+                    Confirmer ce cadeau
+                  </>
+                )}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                disabled={!canOrder}
+                className="w-full sm:w-auto h-full px-8 py-4 rounded-xl bg-[#3D5A73] hover:bg-[#2A3F50] text-white text-[11px] md:text-[13px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center justify-center gap-3"
+              >
+                {justAddedCart ? (
+                  <>
+                    <Check size={16} strokeWidth={2.5} />
+                    Ajouté
+                  </>
+                ) : (
+                  <>
+                    <ShoppingBag size={16} strokeWidth={2} />
+                    Ajouter au panier
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -1464,25 +848,151 @@ export function Configurator() {
         />
       )}
 
+      <ShareModal
+        open={shareModalOpen}
+        name={shareName}
+        onChange={setShareName}
+        onClose={() => setShareModalOpen(false)}
+        onSubmit={async () => {
+          const submitted = shareName;
+          setShareModalOpen(false);
+          await performShare(submitted);
+        }}
+      />
+
+      <GiftModal
+        open={giftModalOpen}
+        initialMode="designed"
+        design={
+          // Snapshot the current bracelet so the gift carries a stable
+          // BraceletConfig, decoupled from later user edits.
+          components.length > 0
+            ? snapshotConfig(
+                useConfigurator.getState(),
+                draftTitle || DEFAULT_BRACELET_NAME,
+                undefined,
+              )
+            : undefined
+        }
+        onClose={() => setGiftModalOpen(false)}
+      />
+
       <UnboxingModal
         open={unboxingOpen}
-        title={creationName}
-        intention={intention.trim()}
+        title={draftTitle || DEFAULT_BRACELET_NAME}
         price={price}
         lengthMm={lengthMm}
         onClose={() => setUnboxingOpen(false)}
         onShare={() => {
-          void handleShareDesign();
+          setUnboxingOpen(false);
+          openShareModal();
         }}
       />
     </div>
   );
 }
 
+function ShareModal({
+  open,
+  name,
+  onChange,
+  onClose,
+  onSubmit,
+}: {
+  open: boolean;
+  name: string;
+  onChange: (next: string) => void;
+  onClose: () => void;
+  onSubmit: () => void | Promise<void>;
+}) {
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          key="share-name-modal"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18 }}
+          className="fixed inset-0 z-[2200] flex items-center justify-center bg-[rgba(26,32,44,0.62)] p-4 backdrop-blur-[3px]"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ scale: 0.96, y: 14, opacity: 0 }}
+            animate={{ scale: 1, y: 0, opacity: 1 }}
+            exit={{ scale: 0.96, y: 8, opacity: 0 }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            className="relative w-full max-w-md overflow-hidden rounded-[1.5rem] border border-[#EEE9E0] bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Fermer"
+              className="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full text-[#718096] transition-colors hover:bg-[#F5F0E8] hover:text-[#2D3748]"
+            >
+              <X size={17} strokeWidth={2} />
+            </button>
+
+            <div className="p-6 md:p-7">
+              <div className="mb-4 inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#3D5A73]">
+                <Share2 size={14} strokeWidth={2.2} />
+                Partager mon bracelet
+              </div>
+              <h3 className="font-serif text-[22px] md:text-[24px] font-black uppercase leading-none tracking-tight text-[#2D3748]">
+                Donnez un nom à votre création
+              </h3>
+              <p className="mt-2 text-[12px] font-semibold text-[#718096]">
+                Ce nom apparaîtra dans le lien partagé.
+              </p>
+
+              <label className="sr-only" htmlFor="share-name">
+                Nom du bracelet
+              </label>
+              <input
+                id="share-name"
+                autoFocus
+                value={name}
+                onChange={(e) => onChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    void onSubmit();
+                  }
+                }}
+                placeholder={DEFAULT_BRACELET_NAME}
+                maxLength={48}
+                className="mt-5 h-12 w-full rounded-lg border border-[#EEE9E0] bg-[#F5F0E8] px-3 text-[14px] font-semibold text-[#2D3748] outline-none transition-colors placeholder:text-[#A8BED4] focus:border-[#3D5A73] focus:bg-white"
+              />
+
+              <div className="mt-5 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="h-11 rounded-lg border border-[#EEE9E0] bg-white text-[10px] font-black uppercase tracking-widest text-[#3D5A73] transition-colors hover:border-[#3D5A73]"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void onSubmit()}
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#2D3748] text-[10px] font-black uppercase tracking-widest text-white transition-colors hover:bg-[#3D5A73]"
+                >
+                  <Share2 size={13} strokeWidth={2.2} />
+                  Partager
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 function UnboxingModal({
   open,
   title,
-  intention,
   price,
   lengthMm,
   onClose,
@@ -1490,7 +1000,6 @@ function UnboxingModal({
 }: {
   open: boolean;
   title: string;
-  intention: string;
   price: number;
   lengthMm: number;
   onClose: () => void;
@@ -1561,11 +1070,6 @@ function UnboxingModal({
               <h3 className="font-serif text-[26px] font-black uppercase leading-none tracking-tight text-[#2D3748]">
                 {title}
               </h3>
-              {intention && (
-                <p className="mt-2 text-[13px] font-semibold italic leading-relaxed text-[#718096]">
-                  {intention}
-                </p>
-              )}
               <div className="mt-5 grid grid-cols-2 gap-2">
                 <div className="rounded-xl border border-[#EEE9E0] bg-white p-3">
                   <p className="text-[9px] font-black uppercase tracking-widest text-[#A8BED4]">

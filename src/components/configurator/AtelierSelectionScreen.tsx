@@ -2,11 +2,15 @@
 
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { ATELIERS } from '@/lib/mocks/ateliers';
+import { Gift } from 'lucide-react';
+import { useState } from 'react';
+import { ATELIERS, ATELIER_BY_ID } from '@/lib/mocks/ateliers';
 import { useConfigurator } from '@/lib/store/configurator';
+import { useGiftCards } from '@/lib/store/gift-cards';
 import { formatPrice } from '@/lib/utils/format';
 import { cn } from '@/lib/utils/cn';
 import { haptic } from '@/lib/utils/feedback';
+import { GiftRedemptionModal } from '@/components/gifts/GiftRedemptionModal';
 
 /**
  * Fullscreen phase 1 of the configurator: user picks an atelier.
@@ -16,12 +20,37 @@ import { haptic } from '@/lib/utils/feedback';
 export function AtelierSelectionScreen() {
   const setAtelier = useConfigurator((s) => s.setAtelier);
   const setStep = useConfigurator((s) => s.setStep);
+  const loadSharedDesign = useConfigurator((s) => s.loadSharedDesign);
+  const getByCode = useGiftCards((s) => s.getByCode);
+  const markViewed = useGiftCards((s) => s.markViewed);
+  const beginRedemption = useGiftCards((s) => s.beginRedemption);
+  const [redeemOpen, setRedeemOpen] = useState(false);
 
   function pickAtelier(id: string) {
     haptic(10);
     setAtelier(id);
     setStep('beads');
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function handleRedeem(code: string) {
+    const card = getByCode(code);
+    if (!card) return;
+    markViewed(card.code);
+    beginRedemption(card.code);
+    if (card.kind === 'designed' && card.design) {
+      loadSharedDesign({
+        atelierId: card.design.atelierId,
+        sizeCm: card.design.sizeCm,
+        sizeLabel: card.design.sizeLabel,
+        components: card.design.components,
+        figurine: card.design.figurine,
+        title: card.design.title,
+        intention: card.design.intention,
+      });
+    } else if (card.kind === 'open' && card.atelierId && ATELIER_BY_ID[card.atelierId]) {
+      pickAtelier(card.atelierId);
+    }
   }
 
   return (
@@ -141,7 +170,29 @@ export function AtelierSelectionScreen() {
           ))}
         </div>
 
+        {/* Gift code redemption — discreet entry point for recipients of a
+            gift card. Sits below the atelier cards, not competing for the
+            primary CTA. */}
+        <div className="mt-10 md:mt-14 text-center">
+          <button
+            type="button"
+            onClick={() => {
+              haptic(6);
+              setRedeemOpen(true);
+            }}
+            className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/5 px-5 py-3 text-[10px] md:text-[11px] font-black uppercase tracking-widest text-white/90 backdrop-blur-md transition-colors hover:border-white/60 hover:bg-white/10"
+          >
+            <Gift size={14} strokeWidth={2.2} />
+            J&rsquo;ai un code cadeau
+          </button>
+        </div>
       </div>
+
+      <GiftRedemptionModal
+        open={redeemOpen}
+        onClose={() => setRedeemOpen(false)}
+        onRedeem={handleRedeem}
+      />
     </div>
   );
 }

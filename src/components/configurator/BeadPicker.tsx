@@ -14,21 +14,9 @@ import { StoneSwatch } from '@/components/ui/StoneSwatch';
 import type { BeadShape } from '@/types';
 import { haptic } from '@/lib/utils/feedback';
 import { beadPhotoZoom } from '@/lib/utils/bead-display';
+import { useT } from '@/lib/i18n/use-t';
 import { formatCmFromMm } from '@/lib/utils/format';
 import { cn } from '@/lib/utils/cn';
-
-const SHAPE_LABELS: Record<BeadShape, string> = {
-  round: 'Ronde',
-  faceted: 'Facettée',
-  rondelle: 'Rondelle',
-  nugget: 'Brute',
-  tube: 'Tube',
-  cube: 'Cube',
-  heart: 'Cœur',
-  star: 'Étoile',
-  flower: 'Fleur',
-  bow: 'Nœud',
-};
 
 interface BeadPickerProps {
   /** Called on pointerdown over a tile so the parent can begin a drag-to-bracelet */
@@ -41,6 +29,7 @@ export function BeadPicker({ onTilePointerDown }: BeadPickerProps = {}) {
   const sizeCm = useConfigurator((s) => s.sizeCm);
   const components = useConfigurator((s) => s.components);
   const atelier = ATELIER_BY_ID[atelierId];
+  const { t } = useT();
 
   const [shapeFilter, setShapeFilter] = useState<BeadShape | null>(null);
 
@@ -66,21 +55,21 @@ export function BeadPicker({ onTilePointerDown }: BeadPickerProps = {}) {
   const atLimit = !canAddAny && components.length > 0;
   const helperText =
     fit.status === 'empty'
-      ? `Encore ${formatCmFromMm(targetMm)} pour une taille parfaite`
+      ? t('bead.helper.empty', formatCmFromMm(targetMm))
       : fit.status === 'ready'
-        ? 'Votre bracelet est complet et parfaitement équilibré. Finalisons votre création.'
+        ? t('bead.helper.ready')
         : fit.status === 'too-long'
-          ? 'Retirez une perle pour retrouver une composition équilibrée.'
+          ? t('bead.helper.tooLong')
           : atLimit
-            ? 'Votre bracelet est complet et parfaitement équilibré. Finalisons votre création.'
-            : `Encore ${formatCmFromMm(fit.remainingMm)} pour une taille parfaite`;
+            ? t('bead.helper.ready')
+            : t('bead.helper.tooShort', formatCmFromMm(fit.remainingMm));
 
   return (
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="text-xl md:text-2xl font-serif font-black text-[#2D3748] uppercase tracking-tighter mb-1">
-            Choisissez vos perles
+            {t('bead.title')}
           </h3>
           <p className="text-[13px] text-[#718096] italic">{helperText}</p>
         </div>
@@ -99,11 +88,11 @@ export function BeadPicker({ onTilePointerDown }: BeadPickerProps = {}) {
       {shapes.length > 1 && (
         <div>
           <p className="text-[9px] font-black uppercase tracking-widest text-[#A8BED4] mb-2">
-            Forme
+            {t('bead.shape.label')}
           </p>
           <div className="flex flex-wrap gap-1.5">
             <FilterChip active={!shapeFilter} onClick={() => setShapeFilter(null)}>
-              Toutes
+              {t('bead.shape.all')}
             </FilterChip>
             {shapes.map((shape) => (
               <FilterChip
@@ -111,7 +100,7 @@ export function BeadPicker({ onTilePointerDown }: BeadPickerProps = {}) {
                 active={shapeFilter === shape}
                 onClick={() => setShapeFilter(shape)}
               >
-                {SHAPE_LABELS[shape]}
+                {t(`shape.${shape}`)}
               </FilterChip>
             ))}
           </div>
@@ -122,10 +111,10 @@ export function BeadPicker({ onTilePointerDown }: BeadPickerProps = {}) {
         {filtered.length === 0 ? (
           <div className="rounded-xl border border-dashed border-[#EEE9E0] bg-[#F5F0E8]/60 px-4 py-8 text-center">
             <p className="text-[12px] font-black uppercase tracking-widest text-[#A8BED4] mb-1">
-              Section vide
+              {t('bead.empty.title')}
             </p>
             <p className="text-[13px] text-[#718096] italic">
-              Aucune perle disponible pour le moment.
+              {t('bead.empty.description')}
             </p>
           </div>
         ) : (
@@ -150,7 +139,7 @@ export function BeadPicker({ onTilePointerDown }: BeadPickerProps = {}) {
                     haptic(4);
                   }}
                   className="group relative aspect-square flex flex-col items-center justify-center gap-1.5 p-2 md:p-3 bg-[#F5F0E8] rounded-xl md:rounded-2xl border border-transparent hover:border-[#3D5A73] hover:bg-white hover:shadow-md active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-transparent disabled:hover:bg-[#F5F0E8] disabled:hover:shadow-none touch-manipulation select-none md:cursor-grab md:active:cursor-grabbing"
-                  aria-label={`Ajouter ${bead.name}`}
+                  aria-label={`${t('bead.add')} ${bead.name}`}
                 >
                   {variant ? (
                     <span className="absolute right-2 top-2 rounded-full bg-[#2D3748] px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-white shadow-sm">

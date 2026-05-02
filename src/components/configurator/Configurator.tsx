@@ -6,6 +6,7 @@ import {
   Check,
   Copy,
   Gift,
+  GripHorizontal,
   Minus,
   PackageCheck,
   Plus,
@@ -50,12 +51,10 @@ import { atelierSound, haptic, successMoment } from '@/lib/utils/feedback';
 import { encodeBraceletDesign } from '@/lib/utils/share-design';
 import { useGiftCards } from '@/lib/store/gift-cards';
 import { GiftModal } from '@/components/gifts/GiftModal';
-import { useGallery } from '@/lib/store/gallery';
+import { useT } from '@/lib/i18n/use-t';
 
-const TABS = [
-  { id: 'beads' as const, label: 'Perles' },
-  { id: 'charms' as const, label: 'Charms' },
-];
+const TAB_IDS = ['beads', 'charms'] as const;
+type TabId = (typeof TAB_IDS)[number];
 
 interface PaletteDrag {
   kind: 'bead' | 'charm';
@@ -72,26 +71,11 @@ const DRAG_THRESHOLD = 5;
 const DEFAULT_BRACELET_NAME = 'Ma création';
 
 /**
- * The two ways the bracelet can be fulfilled. Wording is intentionally
- * identical to Dany's branch — same labels and copy as the rest of the
- * brand uses on the artisan story / kit pages.
+ * The two ways the bracelet can be fulfilled. Labels resolved at render
+ * time via the i18n hook so FR/EN both work. Order matters: DIY first
+ * because it's the default + recommended.
  */
-const FULFILLMENT_OPTIONS: Array<{
-  id: FulfillmentMode;
-  label: string;
-  detail: string;
-}> = [
-  {
-    id: 'diy-kit',
-    label: 'Kit DIY · recommandé',
-    detail: 'Les pièces préparées, à monter chez vous.',
-  },
-  {
-    id: 'assembled-paris',
-    label: 'Assemblé à Paris',
-    detail: 'Assemblé à la main par notre atelier parisien.',
-  },
-];
+const FULFILLMENT_IDS: FulfillmentMode[] = ['diy-kit', 'assembled-paris'];
 
 export function Configurator() {
   const {
@@ -135,10 +119,7 @@ export function Configurator() {
   const updateDesignedGift = useGiftCards((s) => s.updateDesignedGift);
   const markGiftRedeemed = useGiftCards((s) => s.markRedeemed);
   const endRedemption = useGiftCards((s) => s.endRedemption);
-  // Each share also publishes to the public gallery so the community feed
-  // grows organically. Recipients of a gift redemption don't publish — they
-  // didn't compose it, they're just acting on someone else's design.
-  const publishToGallery = useGallery((s) => s.publish);
+  const { t } = useT();
 
   // Fulfillment mode chosen at order time : DIY kit (default — pieces
   // packaged separately to assemble at home) or assembled in our Paris
@@ -154,6 +135,11 @@ export function Configurator() {
   const [giftModalOpen, setGiftModalOpen] = useState(false);
   const [giftRedeemedConfirm, setGiftRedeemedConfirm] = useState(false);
   const [unboxingOpen, setUnboxingOpen] = useState(false);
+  // CompositionTray ("Ma composition") is hidden by default — surfacing it
+  // costs vertical real estate and confuses first-time users. The toggle
+  // sits next to "Recommencer" so reordering / batch-removing pieces is one
+  // click away when needed.
+  const [compositionOpen, setCompositionOpen] = useState(false);
   const [customStepperOpen, setCustomStepperOpen] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -204,12 +190,12 @@ export function Configurator() {
   const canOrder = fit.status === 'ready';
   const fitMessage =
     fit.status === 'empty'
-      ? 'Ajoutez vos premières perles pour composer le bracelet'
+      ? t('fit.empty')
       : fit.status === 'ready'
-        ? `Ajustement parfait · ${formatCmFromMm(lengthMm)}`
+        ? `${t('fit.ready')} · ${formatCmFromMm(lengthMm)}`
         : fit.status === 'too-long'
-          ? `Trop long de ${formatCmFromMm(fit.overflowMm)} · retirez une perle`
-          : `Encore ${formatCmFromMm(fit.remainingMm)} pour une taille parfaite`;
+          ? `${t('fit.tooLong')} ${formatCmFromMm(fit.overflowMm)} · ${t('fit.tooLongSuffix')}`
+          : `${t('fit.tooShort')} ${formatCmFromMm(fit.remainingMm)} ${t('fit.tooShortSuffix')}`;
 
   // Listen to global pointer events while dragging from palette
   useEffect(() => {
@@ -284,23 +270,6 @@ export function Configurator() {
     url.searchParams.set('design', encodeBraceletDesign(design));
     const shareText = `Regarde mon bracelet "${finalName}" créé chez My Nice Bracelet.`;
 
-    // Publish to the public gallery — but only when the user composed this
-    // bracelet themselves (not when they're a recipient redeeming someone
-    // else's gift). Otherwise gifts would leak into the public feed even
-    // though the redeemer didn't author the design.
-    if (!activeRedemptionCode) {
-      publishToGallery({
-        title: finalName,
-        // No separate "creator name" input in the share modal — leave
-        // anonymous. The gallery card displays "Anonyme" in that case.
-        atelierId,
-        sizeCm,
-        sizeLabel,
-        components,
-        figurine,
-      });
-    }
-
     try {
       if (navigator.share) {
         await navigator.share({
@@ -308,14 +277,14 @@ export function Configurator() {
           text: shareText,
           url: url.toString(),
         });
-        setShareStatus('Partage ouvert');
+        setShareStatus(t('action.shareOpen'));
       } else {
         await navigator.clipboard.writeText(`${shareText}\n${url.toString()}`);
-        setShareStatus('Lien copié');
+        setShareStatus(t('action.linkCopied'));
       }
       haptic([6, 18, 6]);
     } catch {
-      setShareStatus('Partage annulé');
+      setShareStatus(t('action.shareCancelled'));
     }
     setTimeout(() => setShareStatus(null), 2400);
   }
@@ -387,7 +356,7 @@ export function Configurator() {
             className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#718096] hover:text-[#2D3748] transition-colors"
           >
             <ArrowLeft size={14} strokeWidth={2} />
-            Changer d&rsquo;atelier
+            {t('configurator.changeAtelier')}
           </button>
           <p className="text-[10px] font-black uppercase tracking-widest text-[#A8BED4]">
             {atelier?.name} · {atelier?.wireType}
@@ -406,13 +375,17 @@ export function Configurator() {
                 </span>
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-widest text-[#3D5A73]">
-                    Cadeau {activeGiftCard.kind === 'designed' ? 'à valider' : 'à composer'}
-                    {activeGiftCard.senderName ? ` · de la part de ${activeGiftCard.senderName}` : ''}
+                    {activeGiftCard.kind === 'designed'
+                      ? t('gift.banner.toValidate')
+                      : t('gift.banner.toCompose')}
+                    {activeGiftCard.senderName
+                      ? ` · ${t('gift.banner.from')} ${activeGiftCard.senderName}`
+                      : ''}
                   </p>
                   <p className="mt-1 font-serif text-[16px] md:text-[18px] font-black uppercase tracking-tight text-[#2D3748]">
                     {activeGiftCard.kind === 'designed'
-                      ? 'Vous pouvez ajuster ce bracelet ou valider tel quel.'
-                      : 'Composez votre bracelet — il vous est offert.'}
+                      ? t('gift.banner.tweakDesigned')
+                      : t('gift.banner.composeOpen')}
                   </p>
                   {activeGiftCard.message && (
                     <p className="mt-1 text-[12px] font-semibold italic text-[#718096]">
@@ -430,7 +403,7 @@ export function Configurator() {
                 className="inline-flex h-9 items-center gap-2 self-start rounded-full border border-[#EEE9E0] bg-white px-3 text-[10px] font-black uppercase tracking-widest text-[#718096] transition-colors hover:border-[#A4473E] hover:text-[#A4473E]"
               >
                 <X size={12} strokeWidth={2.2} />
-                Quitter le mode cadeau
+                {t('gift.banner.exit')}
               </button>
             </div>
           </div>
@@ -520,7 +493,7 @@ export function Configurator() {
                       )}
                     >
                       <span className="text-[10px] font-black uppercase tracking-tight">
-                        Perso.
+                        {t('size.perso')}
                       </span>
                       <span
                         className={cn(
@@ -543,7 +516,7 @@ export function Configurator() {
                           adjustSize(-0.5);
                         }}
                         className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-[#F5F0E8] hover:bg-[#EEE9E0] text-[#3D5A73] transition-colors"
-                        aria-label="Réduire la taille de 0,5 cm"
+                        aria-label={t('size.decrease')}
                       >
                         <Minus size={14} strokeWidth={2.4} />
                       </button>
@@ -557,7 +530,7 @@ export function Configurator() {
                           adjustSize(0.5);
                         }}
                         className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-[#F5F0E8] hover:bg-[#EEE9E0] text-[#3D5A73] transition-colors"
-                        aria-label="Augmenter la taille de 0,5 cm"
+                        aria-label={t('size.increase')}
                       >
                         <Plus size={14} strokeWidth={2.4} />
                       </button>
@@ -570,7 +543,7 @@ export function Configurator() {
                         className="inline-flex items-center gap-1.5 h-8 px-3 ml-1 rounded-full bg-[#3D5A73] hover:bg-[#2A3F50] text-white text-[10px] font-black uppercase tracking-widest transition-colors"
                       >
                         <Check size={12} strokeWidth={2.6} />
-                        Valider
+                        {t('size.confirm')}
                       </button>
                     </div>
                   )}
@@ -600,7 +573,7 @@ export function Configurator() {
                   zoom={zoom}
                   pan={pan}
                   onPanChange={setPan}
-                  emptyText="Glissez une perle pour commencer"
+                  emptyText={t('configurator.empty')}
                 />
               </div>
 
@@ -624,7 +597,7 @@ export function Configurator() {
                       type="button"
                       onClick={() => removeComponent(selectedComponent)}
                       className="inline-flex items-center justify-center h-8 w-8 rounded-lg text-[#A4473E] hover:bg-[#A4473E]/10 transition-colors ml-1"
-                      aria-label="Retirer"
+                      aria-label={t('configurator.remove')}
                     >
                       <Trash2 size={14} strokeWidth={1.8} />
                     </button>
@@ -641,7 +614,7 @@ export function Configurator() {
                     zoomOut();
                   }}
                   disabled={zoom <= ZOOM_MIN + 0.001}
-                  aria-label="Dézoomer"
+                  aria-label={t('configurator.zoomOut')}
                   className="inline-flex items-center justify-center h-8 w-8 rounded-full text-[#3D5A73] hover:bg-[#F5F0E8] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
                   <ZoomOut size={14} strokeWidth={2.2} />
@@ -652,7 +625,7 @@ export function Configurator() {
                     haptic(4);
                     zoomReset();
                   }}
-                  aria-label="Zoom 100 %"
+                  aria-label={t('configurator.zoomReset')}
                   className="inline-flex items-center justify-center min-w-[44px] h-8 px-2 rounded-full text-[10px] font-black uppercase tracking-widest tabular-nums text-[#3D5A73] hover:bg-[#F5F0E8] transition-colors"
                 >
                   {Math.round(zoom * 100)}%
@@ -664,14 +637,14 @@ export function Configurator() {
                     zoomIn();
                   }}
                   disabled={zoom >= ZOOM_MAX - 0.001}
-                  aria-label="Zoomer"
+                  aria-label={t('configurator.zoomIn')}
                   className="inline-flex items-center justify-center h-8 w-8 rounded-full text-[#3D5A73] hover:bg-[#F5F0E8] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
                   <ZoomIn size={14} strokeWidth={2.2} />
                 </button>
               </div>
 
-              {/* Inspire-moi + Recommencer floating bottom of bracelet stage */}
+              {/* Inspire-moi + Recommencer + Réorganiser floating bottom of bracelet stage */}
               <div className="absolute bottom-2 md:bottom-3 left-2 md:left-3 z-10 flex flex-wrap items-center gap-2">
                 <InspireButton />
                 <button
@@ -684,7 +657,24 @@ export function Configurator() {
                   className="inline-flex items-center gap-2 h-10 px-4 rounded-full bg-white/85 backdrop-blur-md border border-[#EEE9E0] text-[10px] font-black uppercase tracking-widest text-[#718096] hover:text-[#2D3748] hover:border-[#3D5A73] transition-colors shadow-sm"
                 >
                   <RotateCcw size={13} strokeWidth={2} />
-                  Recommencer
+                  {t('configurator.restart')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    haptic(6);
+                    setCompositionOpen((v) => !v);
+                  }}
+                  disabled={beadsCount + charmsCount === 0 && !figurine}
+                  className={cn(
+                    'inline-flex items-center gap-2 h-10 px-4 rounded-full backdrop-blur-md border text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm disabled:cursor-not-allowed disabled:opacity-50',
+                    compositionOpen
+                      ? 'bg-[#2D3748] border-[#2D3748] text-white hover:bg-[#3D5A73]'
+                      : 'bg-white/85 border-[#EEE9E0] text-[#718096] hover:text-[#2D3748] hover:border-[#3D5A73]',
+                  )}
+                >
+                  <GripHorizontal size={13} strokeWidth={2} />
+                  {t('configurator.reorganize')}
                 </button>
               </div>
             </div>
@@ -701,7 +691,7 @@ export function Configurator() {
                 <div className="sticky top-0 z-10 bg-white px-5 md:px-7 pt-5 md:pt-7 pb-4 border-b border-[#EEE9E0]">
                   <div className="mb-4">
                     <p className="mb-2 text-[9px] font-black uppercase tracking-widest text-[#A8BED4]">
-                      Univers
+                      {t('configurator.universe')}
                     </p>
                     <div className="flex gap-1.5 overflow-x-auto pb-1">
                       {ATELIERS.map((item) => {
@@ -724,10 +714,10 @@ export function Configurator() {
                             )}
                           >
                             {item.id === 'atelier_bracelet_bar'
-                              ? 'Essentiel'
+                              ? t('atelier.bracelet_bar.short')
                               : item.id === 'atelier_kawaii'
-                                ? 'Kawaii'
-                                : 'Classique'}
+                                ? t('atelier.kawaii.short')
+                                : t('atelier.classique.short')}
                           </button>
                         );
                       })}
@@ -739,27 +729,29 @@ export function Configurator() {
                       atelier?.allowCharms ? 'grid-cols-2' : 'grid-cols-1',
                     )}
                   >
-                    {TABS.filter((t) => t.id !== 'charms' || atelier?.allowCharms).map((t) => {
-                      const active = tab === t.id;
+                    {TAB_IDS.filter((id) => id !== 'charms' || atelier?.allowCharms).map((id: TabId) => {
+                      const active = tab === id;
                       // Kawaii uses figurines (Sanrio / Disney) instead of generic charms.
                       const label =
-                        t.id === 'charms' && atelier?.id === 'atelier_kawaii'
-                          ? 'Figurines'
-                          : t.label;
+                        id === 'beads'
+                          ? t('tabs.beads')
+                          : atelier?.id === 'atelier_kawaii'
+                            ? t('tabs.figurines')
+                            : t('tabs.charms');
                       // Beads tab : compact "X,X / YY cm" (no decimals on the
                       // target since presets are integer cm values).
                       // Charms tab : count / max.
                       const badge =
-                        t.id === 'beads'
+                        id === 'beads'
                           ? `${(lengthMm / 10).toFixed(1).replace('.', ',')}/${(targetMm / 10).toFixed(0)} cm`
                           : `${charmsCount}/${atelier?.maxCharms ?? 0}`;
                       return (
                         <button
-                          key={t.id}
+                          key={id}
                           type="button"
                           onClick={() => {
                             haptic(6);
-                            setStep(t.id);
+                            setStep(id);
                           }}
                           className={cn(
                             'flex items-center justify-between gap-2 p-3 rounded-xl border transition-all',
@@ -814,11 +806,10 @@ export function Configurator() {
         </div>
 
         {/* ─── MA COMPOSITION ─── horizontal tray of placed pieces with
-            reorder/remove controls. Surfaces only when at least one piece
-            is on the cord (or a figurine is attached) — otherwise the
-            empty placeholder feels redundant with the empty bracelet
-            preview above. */}
-        {(components.length > 0 || figurine) && (
+            reorder/remove controls. Hidden by default; shown when the user
+            clicks the "Réorganiser" button next to "Recommencer". Also
+            requires at least one piece on the cord. */}
+        {compositionOpen && (components.length > 0 || figurine) && (
           <div className="mt-4">
             <CompositionTray
               components={components}
@@ -858,18 +849,24 @@ export function Configurator() {
         {!activeRedemptionCode && (
           <div className="mt-6 md:mt-8 rounded-[1.5rem] border border-[#EEE9E0] bg-white p-4 md:p-5 shadow-sm">
             <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-[#A8BED4]">
-              Assemblage
+              {t('fulfillment.label')}
             </p>
             <div className="grid gap-2 sm:grid-cols-2">
-              {FULFILLMENT_OPTIONS.map((option) => {
-                const active = fulfillmentMode === option.id;
+              {FULFILLMENT_IDS.map((id) => {
+                const active = fulfillmentMode === id;
+                const label =
+                  id === 'diy-kit' ? t('fulfillment.diy.label') : t('fulfillment.assembled.label');
+                const detail =
+                  id === 'diy-kit'
+                    ? t('fulfillment.diy.detail')
+                    : t('fulfillment.assembled.detail');
                 return (
                   <button
-                    key={option.id}
+                    key={id}
                     type="button"
                     onClick={() => {
                       haptic(4);
-                      setFulfillmentMode(option.id);
+                      setFulfillmentMode(id);
                     }}
                     className={cn(
                       'rounded-xl border p-3 text-left transition-colors',
@@ -879,10 +876,10 @@ export function Configurator() {
                     )}
                   >
                     <span className="block text-[10px] font-black uppercase tracking-widest">
-                      {option.label}
+                      {label}
                     </span>
                     <span className="mt-1 block text-[12px] font-semibold italic leading-relaxed">
-                      {option.detail}
+                      {detail}
                     </span>
                   </button>
                 );
@@ -903,14 +900,14 @@ export function Configurator() {
               <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-[#A8BED4] mb-1">
                 {atelier?.id === 'atelier_kawaii'
                   ? `${atelier?.name} · ${atelier?.wireType}`
-                  : `${atelier?.name} · ${sizeLabel === 'custom' ? 'Perso' : sizeLabel} · ${sizeCm.toString().replace('.', ',')} cm`}
+                  : `${atelier?.name} · ${sizeLabel === 'custom' ? t('size.perso').replace('.', '') : sizeLabel} · ${sizeCm.toString().replace('.', ',')} cm`}
               </p>
               <p className="font-serif text-[14px] md:text-[16px] font-black uppercase tracking-tight text-[#2D3748]">
                 {fitMessage}
               </p>
             </div>
             <p className="font-serif text-[24px] md:text-[28px] font-black tracking-tighter text-[#2D3748] tabular-nums shrink-0">
-              {activeRedemptionCode ? 'Offert' : formatPrice(price)}
+              {activeRedemptionCode ? t('action.offered') : formatPrice(price)}
             </p>
           </div>
           <button
@@ -919,12 +916,12 @@ export function Configurator() {
             disabled={components.length === 0}
             className="h-full w-full sm:w-auto px-5 py-4 rounded-xl border border-[#EEE9E0] bg-white text-[11px] md:text-[13px] font-black uppercase tracking-widest text-[#3D5A73] transition-colors hover:border-[#3D5A73] hover:text-[#2D3748] disabled:cursor-not-allowed disabled:opacity-40 inline-flex items-center justify-center gap-2"
           >
-            {shareStatus === 'Lien copié' ? (
+            {shareStatus === t('action.linkCopied') ? (
               <Copy size={14} strokeWidth={2.2} />
             ) : (
               <Share2 size={14} strokeWidth={2.2} />
             )}
-            {shareStatus ?? 'Partager'}
+            {shareStatus ?? t('action.share')}
           </button>
           {/* "Offrir" — only when not in redemption mode */}
           {!activeRedemptionCode && (
@@ -938,7 +935,7 @@ export function Configurator() {
               className="h-full w-full sm:w-auto px-5 py-4 rounded-xl border border-[#EEE9E0] bg-white text-[11px] md:text-[13px] font-black uppercase tracking-widest text-[#3D5A73] transition-colors hover:border-[#3D5A73] hover:text-[#2D3748] disabled:cursor-not-allowed disabled:opacity-40 inline-flex items-center justify-center gap-2"
             >
               <Gift size={14} strokeWidth={2.2} />
-              Offrir
+              {t('action.gift')}
             </button>
           )}
           <div ref={addToCartRef}>
@@ -952,12 +949,12 @@ export function Configurator() {
                 {giftRedeemedConfirm ? (
                   <>
                     <Check size={16} strokeWidth={2.5} />
-                    Confirmé
+                    {t('action.confirmed')}
                   </>
                 ) : (
                   <>
                     <Gift size={16} strokeWidth={2} />
-                    Confirmer ce cadeau
+                    {t('action.confirmGift')}
                   </>
                 )}
               </button>
@@ -971,12 +968,12 @@ export function Configurator() {
                 {justAddedCart ? (
                   <>
                     <Check size={16} strokeWidth={2.5} />
-                    Ajouté
+                    {t('action.added')}
                   </>
                 ) : (
                   <>
                     <ShoppingBag size={16} strokeWidth={2} />
-                    Ajouter au panier
+                    {t('action.addToCart')}
                   </>
                 )}
               </button>
@@ -1052,6 +1049,7 @@ function ShareModal({
   onClose: () => void;
   onSubmit: () => void | Promise<void>;
 }) {
+  const { t } = useT();
   return (
     <AnimatePresence>
       {open && (
@@ -1084,17 +1082,17 @@ function ShareModal({
             <div className="p-6 md:p-7">
               <div className="mb-4 inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#3D5A73]">
                 <Share2 size={14} strokeWidth={2.2} />
-                Partager mon bracelet
+                {t('share.modal.eyebrow')}
               </div>
               <h3 className="font-serif text-[22px] md:text-[24px] font-black uppercase leading-none tracking-tight text-[#2D3748]">
-                Donnez un nom à votre création
+                {t('share.modal.title')}
               </h3>
               <p className="mt-2 text-[12px] font-semibold text-[#718096]">
-                Ce nom apparaîtra dans le lien partagé.
+                {t('share.modal.subtitle')}
               </p>
 
               <label className="sr-only" htmlFor="share-name">
-                Nom du bracelet
+                {t('share.modal.title')}
               </label>
               <input
                 id="share-name"
@@ -1107,7 +1105,7 @@ function ShareModal({
                     void onSubmit();
                   }
                 }}
-                placeholder={DEFAULT_BRACELET_NAME}
+                placeholder={t('share.defaultName')}
                 maxLength={48}
                 className="mt-5 h-12 w-full rounded-lg border border-[#EEE9E0] bg-[#F5F0E8] px-3 text-[14px] font-semibold text-[#2D3748] outline-none transition-colors placeholder:text-[#A8BED4] focus:border-[#3D5A73] focus:bg-white"
               />
@@ -1118,7 +1116,7 @@ function ShareModal({
                   onClick={onClose}
                   className="h-11 rounded-lg border border-[#EEE9E0] bg-white text-[10px] font-black uppercase tracking-widest text-[#3D5A73] transition-colors hover:border-[#3D5A73]"
                 >
-                  Annuler
+                  {t('share.modal.cancel')}
                 </button>
                 <button
                   type="button"
@@ -1126,7 +1124,7 @@ function ShareModal({
                   className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#2D3748] text-[10px] font-black uppercase tracking-widest text-white transition-colors hover:bg-[#3D5A73]"
                 >
                   <Share2 size={13} strokeWidth={2.2} />
-                  Partager
+                  {t('share.modal.confirm')}
                 </button>
               </div>
             </div>
@@ -1152,6 +1150,7 @@ function UnboxingModal({
   onClose: () => void;
   onShare: () => void;
 }) {
+  const { t } = useT();
   return (
     <AnimatePresence>
       {open && (
@@ -1212,7 +1211,7 @@ function UnboxingModal({
             <div className="p-6">
               <div className="mb-4 inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#3D5A73]">
                 <PackageCheck size={14} strokeWidth={2.2} />
-                Unboxing digital
+                {t('unboxing.eyebrow')}
               </div>
               <h3 className="font-serif text-[26px] font-black uppercase leading-none tracking-tight text-[#2D3748]">
                 {title}
@@ -1220,7 +1219,7 @@ function UnboxingModal({
               <div className="mt-5 grid grid-cols-2 gap-2">
                 <div className="rounded-xl border border-[#EEE9E0] bg-white p-3">
                   <p className="text-[9px] font-black uppercase tracking-widest text-[#A8BED4]">
-                    Longueur
+                    {t('unboxing.length')}
                   </p>
                   <p className="mt-1 font-serif text-[18px] font-black text-[#2D3748]">
                     {formatCmFromMm(lengthMm)}
@@ -1228,7 +1227,7 @@ function UnboxingModal({
                 </div>
                 <div className="rounded-xl border border-[#EEE9E0] bg-white p-3">
                   <p className="text-[9px] font-black uppercase tracking-widest text-[#A8BED4]">
-                    Prix
+                    {t('unboxing.price')}
                   </p>
                   <p className="mt-1 font-serif text-[18px] font-black text-[#2D3748]">
                     {formatPrice(price)}
@@ -1241,7 +1240,7 @@ function UnboxingModal({
                   onClick={onClose}
                   className="h-11 rounded-lg border border-[#EEE9E0] bg-white text-[10px] font-black uppercase tracking-widest text-[#3D5A73] transition-colors hover:border-[#3D5A73]"
                 >
-                  Fermer
+                  {t('unboxing.close')}
                 </button>
                 <button
                   type="button"
@@ -1249,7 +1248,7 @@ function UnboxingModal({
                   className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#2D3748] text-[10px] font-black uppercase tracking-widest text-white transition-colors hover:bg-[#3D5A73]"
                 >
                   <Share2 size={13} strokeWidth={2.2} />
-                  Partager
+                  {t('unboxing.share')}
                 </button>
               </div>
             </div>

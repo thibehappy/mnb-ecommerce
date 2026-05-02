@@ -6,6 +6,7 @@ import { useState } from 'react';
 import type { BraceletConfig, GiftCard } from '@/types';
 import { ATELIERS, ATELIER_BY_ID } from '@/lib/mocks/ateliers';
 import { useGiftCards } from '@/lib/store/gift-cards';
+import { useT } from '@/lib/i18n/use-t';
 import { formatPrice } from '@/lib/utils/format';
 import { cn } from '@/lib/utils/cn';
 import { haptic } from '@/lib/utils/feedback';
@@ -48,6 +49,7 @@ export function GiftModal({
 
   const createDesignedGift = useGiftCards((s) => s.createDesignedGift);
   const createOpenGift = useGiftCards((s) => s.createOpenGift);
+  const { t } = useT();
 
   // When a designed bracelet is provided we lock the mode UI to "designed"
   // by default, but the sender can still flip to "open" if they prefer the
@@ -117,7 +119,7 @@ export function GiftModal({
             <button
               type="button"
               onClick={handleClose}
-              aria-label="Fermer"
+              aria-label={t('unboxing.close')}
               className="absolute right-4 top-4 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full text-[#718096] transition-colors hover:bg-[#F5F0E8] hover:text-[#2D3748]"
             >
               <X size={17} strokeWidth={2} />
@@ -129,15 +131,15 @@ export function GiftModal({
               <div className="p-6 md:p-7">
                 <div className="mb-4 inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#3D5A73]">
                   <Gift size={14} strokeWidth={2.2} />
-                  Offrir un bracelet
+                  {t('giftModal.eyebrow')}
                 </div>
                 <h3 className="font-serif text-[22px] md:text-[24px] font-black uppercase leading-none tracking-tight text-[#2D3748]">
-                  Carte cadeau
+                  {t('giftModal.title')}
                 </h3>
                 <p className="mt-2 text-[12px] font-semibold text-[#718096]">
                   {mode === 'designed'
-                    ? 'Le bracelet que vous venez de composer est offert avec un code unique. La personne qui le reçoit pourra le voir, l’ajuster ou valider tel quel.'
-                    : 'La personne qui reçoit le code choisit ses perles et compose son bracelet en ligne dans l’atelier que vous lui réservez.'}
+                    ? t('giftModal.designedHelp')
+                    : t('giftModal.openHelp')}
                 </p>
 
                 {/* Mode toggle — only meaningful when a designed bracelet is
@@ -162,10 +164,10 @@ export function GiftModal({
                     )}
                   >
                     <span className="text-[10px] font-black uppercase tracking-widest">
-                      Ma création
+                      {t('giftModal.modeDesigned')}
                     </span>
                     <span className="text-[11px] font-semibold opacity-90">
-                      Le bracelet que je viens de composer
+                      {t('giftModal.modeDesigned.detail')}
                     </span>
                   </button>
                   <button
@@ -182,10 +184,10 @@ export function GiftModal({
                     )}
                   >
                     <span className="text-[10px] font-black uppercase tracking-widest">
-                      À composer
+                      {t('giftModal.modeOpen')}
                     </span>
                     <span className="text-[11px] font-semibold opacity-90">
-                      La personne crée son propre bracelet
+                      {t('giftModal.modeOpen.detail')}
                     </span>
                   </button>
                 </div>
@@ -195,7 +197,7 @@ export function GiftModal({
                 {mode === 'open' ? (
                   <div className="mt-4">
                     <label className="text-[10px] font-black uppercase tracking-widest text-[#A8BED4]">
-                      Atelier réservé
+                      {t('giftModal.atelierLocked')}
                     </label>
                     <div className="mt-2 grid gap-2">
                       {ATELIERS.map((a) => {
@@ -234,11 +236,11 @@ export function GiftModal({
                 ) : design ? (
                   <div className="mt-4 rounded-xl border border-[#EEE9E0] bg-[#F5F0E8] p-3">
                     <p className="text-[10px] font-black uppercase tracking-widest text-[#A8BED4]">
-                      Bracelet offert
+                      {t('giftModal.bracelet')}
                     </p>
                     <div className="mt-1 flex items-center justify-between gap-3">
                       <p className="text-[13px] font-black uppercase tracking-tight text-[#2D3748]">
-                        {design.title || 'Ma création'} ·{' '}
+                        {design.title || t('share.defaultName')} ·{' '}
                         {ATELIER_BY_ID[design.atelierId]?.name ?? '—'}
                       </p>
                       <span className="font-serif text-[18px] font-black tracking-tighter text-[#2D3748] tabular-nums">
@@ -255,13 +257,13 @@ export function GiftModal({
                       htmlFor="gift-sender"
                       className="text-[10px] font-black uppercase tracking-widest text-[#A8BED4]"
                     >
-                      De la part de
+                      {t('giftModal.from')}
                     </label>
                     <input
                       id="gift-sender"
                       value={senderName}
                       onChange={(e) => setSenderName(e.target.value)}
-                      placeholder="Votre prénom"
+                      placeholder={t('giftModal.fromPlaceholder')}
                       maxLength={32}
                       className="mt-1 h-11 w-full rounded-lg border border-[#EEE9E0] bg-[#F5F0E8] px-3 text-[13px] font-semibold text-[#2D3748] outline-none transition-colors placeholder:text-[#A8BED4] focus:border-[#3D5A73] focus:bg-white"
                     />
@@ -271,13 +273,13 @@ export function GiftModal({
                       htmlFor="gift-recipient"
                       className="text-[10px] font-black uppercase tracking-widest text-[#A8BED4]"
                     >
-                      Pour
+                      {t('giftModal.to')}
                     </label>
                     <input
                       id="gift-recipient"
                       value={recipientName}
                       onChange={(e) => setRecipientName(e.target.value)}
-                      placeholder="Prénom du destinataire"
+                      placeholder={t('giftModal.toPlaceholder')}
                       maxLength={32}
                       className="mt-1 h-11 w-full rounded-lg border border-[#EEE9E0] bg-[#F5F0E8] px-3 text-[13px] font-semibold text-[#2D3748] outline-none transition-colors placeholder:text-[#A8BED4] focus:border-[#3D5A73] focus:bg-white"
                     />
@@ -289,13 +291,13 @@ export function GiftModal({
                     htmlFor="gift-message"
                     className="text-[10px] font-black uppercase tracking-widest text-[#A8BED4]"
                   >
-                    Petit mot (facultatif)
+                    {t('giftModal.message')}
                   </label>
                   <textarea
                     id="gift-message"
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Bonne fête, joyeux anniversaire…"
+                    placeholder={t('giftModal.messagePlaceholder')}
                     maxLength={180}
                     rows={3}
                     className="mt-1 w-full resize-none rounded-lg border border-[#EEE9E0] bg-white px-3 py-2 text-[13px] font-semibold text-[#2D3748] outline-none transition-colors placeholder:text-[#A8BED4] focus:border-[#3D5A73]"
@@ -304,7 +306,7 @@ export function GiftModal({
 
                 <div className="mt-5 flex items-center justify-between gap-3">
                   <div className="text-[10px] font-black uppercase tracking-widest text-[#A8BED4]">
-                    Total{' '}
+                    {t('giftModal.total')}{' '}
                     <span className="text-[14px] tracking-tighter text-[#2D3748]">
                       {mode === 'designed' && design
                         ? formatPrice(design.price)
@@ -320,7 +322,7 @@ export function GiftModal({
                     className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#2D3748] px-5 text-[10px] font-black uppercase tracking-widest text-white transition-colors hover:bg-[#3D5A73] disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <Sparkles size={13} strokeWidth={2.2} />
-                    Générer le code
+                    {t('giftModal.generate')}
                   </button>
                 </div>
               </div>
@@ -335,6 +337,7 @@ export function GiftModal({
 function GiftConfirmation({ card, onClose }: { card: GiftCard; onClose: () => void }) {
   const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle');
   const [shareState, setShareState] = useState<string | null>(null);
+  const { t } = useT();
 
   const giftUrl =
     typeof window !== 'undefined'
@@ -354,6 +357,9 @@ function GiftConfirmation({ card, onClose }: { card: GiftCard; onClose: () => vo
 
   async function handleShare() {
     if (typeof navigator === 'undefined') return;
+    // Note: outgoing share text stays in the recipient's locale (we don't
+    // know what language they read in). For our toast feedback we use the
+    // sender's language via t().
     const shareText = card.recipientName
       ? `${card.recipientName}, votre bracelet vous attend chez My Nice Bracelet.`
       : 'Votre bracelet vous attend chez My Nice Bracelet.';
@@ -364,13 +370,13 @@ function GiftConfirmation({ card, onClose }: { card: GiftCard; onClose: () => vo
           text: `${shareText} Code : ${card.code}`,
           url: giftUrl,
         });
-        setShareState('Partage ouvert');
+        setShareState(t('action.shareOpen'));
       } else {
         await navigator.clipboard.writeText(`${shareText}\nCode : ${card.code}\n${giftUrl}`);
-        setShareState('Lien copié');
+        setShareState(t('action.linkCopied'));
       }
     } catch {
-      setShareState('Partage annulé');
+      setShareState(t('action.shareCancelled'));
     }
     window.setTimeout(() => setShareState(null), 2400);
   }
@@ -384,29 +390,29 @@ function GiftConfirmation({ card, onClose }: { card: GiftCard; onClose: () => vo
     <div className="p-6 md:p-7">
       <div className="mb-4 inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#244A35]">
         <Check size={14} strokeWidth={2.4} />
-        Carte créée
+        {t('giftConfirm.eyebrow')}
       </div>
       <h3 className="font-serif text-[22px] md:text-[24px] font-black uppercase leading-none tracking-tight text-[#2D3748]">
-        Votre code cadeau
+        {t('giftConfirm.title')}
       </h3>
       <p className="mt-2 text-[12px] font-semibold text-[#718096]">
         {card.kind === 'designed'
-          ? 'Transmettez ce code à la personne qui recevra votre bracelet. Elle pourra l’ouvrir, le voir et l’ajuster avant la confection.'
-          : `Transmettez ce code à la personne. Elle compose son bracelet en ligne dans l’atelier ${atelierName ?? ''}.`}
+          ? t('giftConfirm.helpDesigned')
+          : `${t('giftConfirm.helpOpen')} ${atelierName ?? ''}.`}
       </p>
 
       {/* Big code block — easy to read, easy to copy */}
       <div className="mt-5 rounded-2xl border border-dashed border-[#3D5A73] bg-[#F5F0E8] p-5 text-center">
         <p className="text-[10px] font-black uppercase tracking-widest text-[#A8BED4]">
-          Code cadeau
+          {t('giftConfirm.codeLabel')}
         </p>
         <p className="mt-2 font-serif text-[26px] md:text-[30px] font-black tracking-[0.18em] text-[#2D3748] tabular-nums">
           {card.code}
         </p>
         {card.recipientName && (
           <p className="mt-2 text-[11px] font-semibold text-[#718096]">
-            Pour {card.recipientName}
-            {card.senderName ? ` · de la part de ${card.senderName}` : ''}
+            {t('giftConfirm.recipient')} {card.recipientName}
+            {card.senderName ? ` · ${t('giftConfirm.fromShort')} ${card.senderName}` : ''}
           </p>
         )}
       </div>
@@ -422,7 +428,7 @@ function GiftConfirmation({ card, onClose }: { card: GiftCard; onClose: () => vo
           ) : (
             <Copy size={13} strokeWidth={2.2} />
           )}
-          {copyState === 'copied' ? 'Copié' : 'Copier le code'}
+          {copyState === 'copied' ? t('giftConfirm.copied') : t('giftConfirm.copyCode')}
         </button>
         <button
           type="button"
@@ -430,7 +436,7 @@ function GiftConfirmation({ card, onClose }: { card: GiftCard; onClose: () => vo
           className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#2D3748] text-[10px] font-black uppercase tracking-widest text-white transition-colors hover:bg-[#3D5A73]"
         >
           <Share2 size={13} strokeWidth={2.2} />
-          {shareState ?? 'Envoyer le lien'}
+          {shareState ?? t('giftConfirm.sendLink')}
         </button>
       </div>
 
@@ -443,7 +449,7 @@ function GiftConfirmation({ card, onClose }: { card: GiftCard; onClose: () => vo
         onClick={onClose}
         className="mt-4 h-10 w-full rounded-lg border border-[#EEE9E0] bg-white text-[10px] font-black uppercase tracking-widest text-[#3D5A73] transition-colors hover:border-[#3D5A73]"
       >
-        Terminé
+        {t('giftConfirm.done')}
       </button>
     </div>
   );

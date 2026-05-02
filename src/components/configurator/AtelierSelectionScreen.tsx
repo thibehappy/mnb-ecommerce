@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { ATELIERS, ATELIER_BY_ID } from '@/lib/mocks/ateliers';
 import { useConfigurator } from '@/lib/store/configurator';
 import { useGiftCards } from '@/lib/store/gift-cards';
+import { useT } from '@/lib/i18n/use-t';
 import { formatPrice } from '@/lib/utils/format';
 import { cn } from '@/lib/utils/cn';
 import { haptic } from '@/lib/utils/feedback';
@@ -20,6 +21,7 @@ import { GiftRedemptionModal } from '@/components/gifts/GiftRedemptionModal';
 export function AtelierSelectionScreen() {
   const setAtelier = useConfigurator((s) => s.setAtelier);
   const setStep = useConfigurator((s) => s.setStep);
+  const { t } = useT();
   const loadSharedDesign = useConfigurator((s) => s.loadSharedDesign);
   const getByCode = useGiftCards((s) => s.getByCode);
   const markViewed = useGiftCards((s) => s.markViewed);
@@ -85,12 +87,12 @@ export function AtelierSelectionScreen() {
             <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-[#3D5A73] text-white text-[9px] font-black tabular-nums">
               1
             </span>
-            Étape 1 sur 3
+            {t('atelierSelect.eyebrow')}
           </span>
           <h1 className="text-white text-[34px] md:text-[64px] font-serif font-black tracking-tighter uppercase leading-[0.95]">
-            Quel atelier
+            {t('atelierSelect.title.line1')}
             <br />
-            <span className="italic font-normal text-[#A8BED4]">choisissez-vous ?</span>
+            <span className="italic font-normal text-[#A8BED4]">{t('atelierSelect.title.line2')}</span>
           </h1>
         </motion.div>
 
@@ -132,7 +134,7 @@ export function AtelierSelectionScreen() {
 
                 {/* Hover hint reveal */}
                 <span className="absolute top-4 right-4 z-10 inline-flex items-center gap-2 bg-white/95 text-[#2D3748] px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest opacity-0 -translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 shadow-md">
-                  Choisir →
+                  {t('atelierSelect.choose')}
                 </span>
 
                 {/* Bottom content */}
@@ -183,7 +185,7 @@ export function AtelierSelectionScreen() {
             className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/5 px-5 py-3 text-[10px] md:text-[11px] font-black uppercase tracking-widest text-white/90 backdrop-blur-md transition-colors hover:border-white/60 hover:bg-white/10"
           >
             <Gift size={14} strokeWidth={2.2} />
-            J&rsquo;ai un code cadeau
+            {t('atelierSelect.haveGiftCode')}
           </button>
         </div>
       </div>

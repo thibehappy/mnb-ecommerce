@@ -18,28 +18,46 @@ import {
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
-import { BraceletGlyph } from '@/components/gallery/BraceletGlyph';
+import { BraceletGlyph } from '@/components/ui/BraceletGlyph';
 import { KIT_BY_ID } from '@/lib/mocks/kits';
 import { useCart, cartSubtotal, cartShipping, cartTotal, subtotalForLine } from '@/lib/store/cart';
+import { useT } from '@/lib/i18n/use-t';
 import { formatPrice } from '@/lib/utils/format';
 import { cn } from '@/lib/utils/cn';
 
 const FREE_SHIPPING_THRESHOLD = 60;
 
-const schema = z.object({
-  email: z.string().email('Adresse email invalide'),
-  firstName: z.string().min(1, 'Requis'),
-  lastName: z.string().min(1, 'Requis'),
-  address: z.string().min(1, 'Requis'),
-  addressExtra: z.string().optional(),
-  postalCode: z.string().regex(/^\d{5}$/, 'Code postal à 5 chiffres'),
-  city: z.string().min(1, 'Requis'),
-  country: z.string().min(1, 'Requis'),
-  phone: z.string().min(6, 'Numéro invalide'),
-  newsletter: z.boolean().optional(),
-});
+/**
+ * Build the form schema lazily so error messages are localised. We can't
+ * declare the schema at module top-level because `t()` is a hook value.
+ */
+function buildSchema(t: (key: string) => string) {
+  return z.object({
+    email: z.string().email(t('checkout.error.email')),
+    firstName: z.string().min(1, t('checkout.error.required')),
+    lastName: z.string().min(1, t('checkout.error.required')),
+    address: z.string().min(1, t('checkout.error.required')),
+    addressExtra: z.string().optional(),
+    postalCode: z.string().regex(/^\d{5}$/, t('checkout.error.postalCode')),
+    city: z.string().min(1, t('checkout.error.required')),
+    country: z.string().min(1, t('checkout.error.required')),
+    phone: z.string().min(6, t('checkout.error.phone')),
+    newsletter: z.boolean().optional(),
+  });
+}
 
-type FormValues = z.infer<typeof schema>;
+type FormValues = {
+  email: string;
+  firstName: string;
+  lastName: string;
+  address: string;
+  addressExtra?: string;
+  postalCode: string;
+  city: string;
+  country: string;
+  phone: string;
+  newsletter?: boolean;
+};
 
 /** Generate a short, human-readable order id for the receipt screen. */
 function makeOrderNumber(): string {
@@ -50,11 +68,17 @@ function makeOrderNumber(): string {
 
 /** Estimate the delivery window. DIY kits ship faster than handmade pieces.
  *  We compute two business-day windows from today; in production this would
- *  come from the back-end based on stock + atelier load. */
-function estimateDelivery(now: Date, allDiy: boolean): { from: string; to: string } {
+ *  come from the back-end based on stock + atelier load. Localised via the
+ *  `lang` argument so EN users see "May 4" rather than "4 mai". */
+function estimateDelivery(
+  now: Date,
+  allDiy: boolean,
+  lang: 'FR' | 'EN',
+): { from: string; to: string } {
   const minDays = allDiy ? 2 : 5;
   const maxDays = allDiy ? 4 : 8;
-  const fmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' });
+  const locale = lang === 'EN' ? 'en-GB' : 'fr-FR';
+  const fmt = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' });
   const fromDate = new Date(now);
   fromDate.setDate(fromDate.getDate() + minDays);
   const toDate = new Date(now);
@@ -69,6 +93,7 @@ export function CheckoutClient() {
   const total = cartTotal(lines);
   const [submitted, setSubmitted] = useState(false);
   const [orderNumber, setOrderNumber] = useState<string>('');
+  const { t, lang } = useT();
 
   const allDiy = useMemo(
     () =>
@@ -77,7 +102,11 @@ export function CheckoutClient() {
       ),
     [lines],
   );
-  const delivery = useMemo(() => estimateDelivery(new Date(), allDiy), [allDiy]);
+  const delivery = useMemo(
+    () => estimateDelivery(new Date(), allDiy, lang),
+    [allDiy, lang],
+  );
+  const schema = useMemo(() => buildSchema(t), [t]);
 
   const remainingForFreeShipping = Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal);
   const freeShippingProgress = Math.min(100, (subtotal / FREE_SHIPPING_THRESHOLD) * 100);
@@ -109,26 +138,28 @@ export function CheckoutClient() {
     return <EmptyCart />;
   }
 
+  const itemsCount = lines.reduce((acc, l) => acc + l.quantity, 0);
+
   return (
     <div className="bg-[#F5F0E8] min-h-screen">
       <div className="container-editorial py-8 lg:py-12">
         <Breadcrumb
           items={[
-            { label: 'Accueil', href: '/' },
-            { label: 'Panier', href: '/panier' },
-            { label: 'Commande' },
+            { label: t('header.home'), href: '/' },
+            { label: t('header.cart'), href: '/panier' },
+            { label: t('checkout.title.line1') },
           ]}
         />
 
         <div className="mt-6 mb-8 lg:mb-12 max-w-3xl">
           <span className="inline-flex items-center gap-2 text-[10px] md:text-[11px] font-black uppercase tracking-[0.3em] text-[#A8BED4]">
             <Sparkles size={14} strokeWidth={2.2} />
-            Dernière étape
+            {t('checkout.eyebrow')}
           </span>
           <h1 className="mt-3 font-serif text-[34px] md:text-[52px] font-black uppercase leading-[0.95] tracking-tighter text-[#2D3748]">
-            Finaliser
+            {t('checkout.title.line1')}
             <br />
-            <span className="italic font-normal text-[#3D5A73]">la commande</span>
+            <span className="italic font-normal text-[#3D5A73]">{t('checkout.title.line2')}</span>
           </h1>
         </div>
 
@@ -138,9 +169,9 @@ export function CheckoutClient() {
             onSubmit={handleSubmit(onSubmit)}
             className="lg:col-span-7 space-y-6"
           >
-            <Section step="1" icon={Mail} title="Contact">
+            <Section step="1" icon={Mail} title={t('checkout.section.contact')}>
               <Input
-                label="Email"
+                label={t('checkout.field.email')}
                 type="email"
                 autoComplete="email"
                 error={errors.email?.message}
@@ -152,20 +183,20 @@ export function CheckoutClient() {
                   {...register('newsletter')}
                   className="h-4 w-4 accent-[#3D5A73]"
                 />
-                Je souhaite recevoir la newsletter MyNiceBracelet
+                {t('checkout.newsletter')}
               </label>
             </Section>
 
-            <Section step="2" icon={MapPin} title="Livraison">
+            <Section step="2" icon={MapPin} title={t('checkout.section.delivery')}>
               <div className="grid sm:grid-cols-2 gap-4">
                 <Input
-                  label="Prénom"
+                  label={t('checkout.field.firstName')}
                   autoComplete="given-name"
                   error={errors.firstName?.message}
                   {...register('firstName')}
                 />
                 <Input
-                  label="Nom"
+                  label={t('checkout.field.lastName')}
                   autoComplete="family-name"
                   error={errors.lastName?.message}
                   {...register('lastName')}
@@ -173,26 +204,26 @@ export function CheckoutClient() {
               </div>
               <div className="mt-4 space-y-4">
                 <Input
-                  label="Adresse"
+                  label={t('checkout.field.address')}
                   autoComplete="street-address"
                   error={errors.address?.message}
                   {...register('address')}
                 />
                 <Input
-                  label="Complément (facultatif)"
+                  label={t('checkout.field.addressExtra')}
                   error={errors.addressExtra?.message}
                   {...register('addressExtra')}
                 />
                 <div className="grid sm:grid-cols-3 gap-4">
                   <Input
-                    label="Code postal"
+                    label={t('checkout.field.postalCode')}
                     inputMode="numeric"
                     autoComplete="postal-code"
                     error={errors.postalCode?.message}
                     {...register('postalCode')}
                   />
                   <Input
-                    label="Ville"
+                    label={t('checkout.field.city')}
                     autoComplete="address-level2"
                     error={errors.city?.message}
                     {...register('city')}
@@ -200,13 +231,13 @@ export function CheckoutClient() {
                   />
                 </div>
                 <Input
-                  label="Pays"
+                  label={t('checkout.field.country')}
                   autoComplete="country-name"
                   error={errors.country?.message}
                   {...register('country')}
                 />
                 <Input
-                  label="Téléphone"
+                  label={t('checkout.field.phone')}
                   type="tel"
                   autoComplete="tel"
                   error={errors.phone?.message}
@@ -221,42 +252,41 @@ export function CheckoutClient() {
                 </span>
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-widest text-[#244A35]">
-                    Livraison estimée
+                    {t('checkout.deliveryEstimate')}
                   </p>
                   <p className="mt-0.5 font-serif text-[15px] font-black tracking-tight text-[#2D3748]">
-                    Entre le {delivery.from} et le {delivery.to}
+                    {t('checkout.deliveryBetween')} {delivery.from} {t('checkout.deliveryAnd')} {delivery.to}
                   </p>
                   <p className="mt-1 text-[11px] font-semibold text-[#718096]">
                     {allDiy
-                      ? 'Les kits DIY partent sous 48h ouvrées.'
-                      : 'Bracelets assemblés à la main dans notre atelier parisien.'}
+                      ? t('checkout.deliveryDiy')
+                      : t('checkout.deliveryAssembled')}
                   </p>
                 </div>
               </div>
             </Section>
 
-            <Section step="3" icon={CreditCard} title="Paiement">
+            <Section step="3" icon={CreditCard} title={t('checkout.section.payment')}>
               <div className="rounded-xl border border-dashed border-[#A8BED4] bg-white p-5 text-center">
                 <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#F5F0E8] text-[#3D5A73]">
                   <Lock size={16} strokeWidth={2} />
                 </span>
                 <p className="mt-3 text-[13px] font-semibold text-[#2D3748] max-w-md mx-auto">
-                  Paiement sécurisé — Visa, Mastercard, Apple Pay
+                  {t('checkout.payment.title')}
                 </p>
                 <p className="mt-1 text-[11px] text-[#718096]">
-                  La passerelle Stripe / Mollie sera branchée à la mise en
-                  ligne. Cette étape est un placeholder pour la démo.
+                  {t('checkout.payment.subtitle')}
                 </p>
               </div>
             </Section>
 
             <Button type="submit" size="lg" fullWidth loading={isSubmitting}>
-              Payer {formatPrice(total)}
+              {t('checkout.pay')} {formatPrice(total)}
             </Button>
             <p className="text-[11px] text-center text-[#718096]">
-              En validant, vous acceptez nos{' '}
+              {t('checkout.cgvPrefix')}{' '}
               <Link href="/cgv" className="underline decoration-[#A8BED4] underline-offset-2 hover:text-[#2D3748]">
-                CGV
+                {t('checkout.cgv')}
               </Link>
               .
             </p>
@@ -268,11 +298,10 @@ export function CheckoutClient() {
               <div className="flex items-center justify-between mb-4">
                 <div className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#3D5A73]">
                   <Package size={14} strokeWidth={2.2} />
-                  Récapitulatif
+                  {t('checkout.summary')}
                 </div>
                 <span className="text-[10px] font-black uppercase tracking-widest text-[#A8BED4]">
-                  {lines.reduce((acc, l) => acc + l.quantity, 0)} article
-                  {lines.reduce((acc, l) => acc + l.quantity, 0) > 1 ? 's' : ''}
+                  {itemsCount} {itemsCount > 1 ? t('checkout.itemsPlural') : t('checkout.itemsSingular')}
                 </span>
               </div>
 
@@ -280,11 +309,11 @@ export function CheckoutClient() {
               {remainingForFreeShipping > 0 ? (
                 <div className="mb-5 rounded-lg bg-[#FBF8F2] border border-[#EEE9E0] p-3">
                   <p className="text-[11px] font-semibold text-[#718096]">
-                    Plus que{' '}
+                    {t('checkout.freeShippingHint')}{' '}
                     <span className="font-black text-[#2D3748] tabular-nums">
                       {formatPrice(remainingForFreeShipping)}
                     </span>{' '}
-                    pour la livraison offerte
+                    {t('checkout.freeShippingHintSuffix')}
                   </p>
                   <div className="mt-2 h-1.5 rounded-full bg-[#EEE9E0] overflow-hidden">
                     <div
@@ -297,7 +326,7 @@ export function CheckoutClient() {
                 <div className="mb-5 rounded-lg bg-[#F4FAF4] border border-[#D9E4D7] p-3 flex items-center gap-2">
                   <Check size={14} strokeWidth={2.4} className="text-[#244A35]" />
                   <p className="text-[11px] font-semibold text-[#244A35]">
-                    Livraison offerte débloquée !
+                    {t('checkout.freeShippingDone')}
                   </p>
                 </div>
               )}
@@ -314,19 +343,19 @@ export function CheckoutClient() {
               {/* Totals */}
               <dl className="mt-4 pt-4 space-y-2 border-t border-[#EEE9E0]">
                 <div className="flex justify-between text-[13px] text-[#718096]">
-                  <dt>Sous-total</dt>
+                  <dt>{t('checkout.subtotal')}</dt>
                   <dd className="tabular-nums">{formatPrice(subtotal)}</dd>
                 </div>
                 <div className="flex justify-between text-[13px] text-[#718096]">
-                  <dt>Livraison</dt>
+                  <dt>{t('checkout.shipping')}</dt>
                   <dd className={cn('tabular-nums', shipping === 0 && 'text-[#244A35] font-black')}>
-                    {shipping === 0 ? 'Offerte' : formatPrice(shipping)}
+                    {shipping === 0 ? t('checkout.shippingFree') : formatPrice(shipping)}
                   </dd>
                 </div>
               </dl>
               <div className="flex justify-between items-baseline pt-3 mt-3 border-t border-[#EEE9E0]">
                 <span className="text-[10px] font-black uppercase tracking-widest text-[#A8BED4]">
-                  Total
+                  {t('checkout.total')}
                 </span>
                 <span className="font-serif text-[28px] font-black tracking-tighter text-[#2D3748] tabular-nums">
                   {formatPrice(total)}
@@ -336,9 +365,9 @@ export function CheckoutClient() {
 
             {/* Trust badges */}
             <div className="grid grid-cols-3 gap-2">
-              <TrustBadge icon={Lock} label="Paiement sécurisé" />
-              <TrustBadge icon={Truck} label="Livraison soignée" />
-              <TrustBadge icon={Gift} label="Emballage offert" />
+              <TrustBadge icon={Lock} label={t('checkout.trust.payment')} />
+              <TrustBadge icon={Truck} label={t('checkout.trust.delivery')} />
+              <TrustBadge icon={Gift} label={t('checkout.trust.packaging')} />
             </div>
           </aside>
         </div>
@@ -383,6 +412,7 @@ function CartLineSummary({
 }: {
   line: ReturnType<typeof useCart.getState>['lines'][number];
 }) {
+  const { t } = useT();
   if (line.kind === 'kit') {
     const kit = KIT_BY_ID[line.kitId];
     return (
@@ -395,7 +425,7 @@ function CartLineSummary({
             {kit?.name ?? '—'}
           </p>
           <p className="text-[10px] font-semibold text-[#A8BED4] uppercase tracking-widest mt-0.5">
-            Kit · qté {line.quantity}
+            {t('checkout.kit')} · {t('checkout.qty')} {line.quantity}
           </p>
         </div>
         <span className="font-serif text-[15px] font-black tabular-nums text-[#2D3748] shrink-0">
@@ -418,10 +448,10 @@ function CartLineSummary({
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-[13px] font-black uppercase tracking-tight text-[#2D3748] truncate">
-          {line.config.title ?? 'Ma création'}
+          {line.config.title ?? t('share.defaultName')}
         </p>
         <p className="text-[10px] font-semibold text-[#A8BED4] uppercase tracking-widest mt-0.5">
-          Qté {line.quantity}
+          {t('checkout.qty')} {line.quantity}
         </p>
         <span
           className={cn(
@@ -431,7 +461,10 @@ function CartLineSummary({
               : 'bg-[#F4FAF4] text-[#244A35] border border-[#D9E4D7]',
           )}
         >
-          {isDiy ? 'Kit DIY' : 'Assemblé à Paris'}
+          {/* Use the same labels as the configurator's fulfillment picker. */}
+          {isDiy
+            ? t('fulfillment.diy.label').replace(' · recommandé', '').replace(' · recommended', '')
+            : t('fulfillment.assembled.label')}
         </span>
       </div>
       <span className="font-serif text-[15px] font-black tabular-nums text-[#2D3748] shrink-0">
@@ -459,6 +492,7 @@ function TrustBadge({
 }
 
 function EmptyCart() {
+  const { t } = useT();
   return (
     <div className="bg-[#F5F0E8] min-h-screen">
       <div className="container-editorial py-16 lg:py-24">
@@ -467,15 +501,15 @@ function EmptyCart() {
             <Package size={22} strokeWidth={1.6} />
           </span>
           <h1 className="mt-5 font-serif text-[28px] font-black uppercase tracking-tight text-[#2D3748]">
-            Votre panier est vide
+            {t('emptyCart.title')}
           </h1>
           <p className="mt-3 text-[14px] text-[#718096] leading-relaxed">
-            Composez votre bracelet ou parcourez nos kits avant de passer commande.
+            {t('emptyCart.subtitle')}
           </p>
           <div className="mt-6 grid grid-cols-2 gap-2">
-            <Button href="/creer">Créer le mien</Button>
-            <Button href="/galerie" variant="outline">
-              Voir la galerie
+            <Button href="/creer">{t('emptyCart.createMine')}</Button>
+            <Button href="/kits" variant="outline">
+              {t('emptyCart.viewKits')}
             </Button>
           </div>
         </div>
@@ -491,6 +525,7 @@ function ConfirmationScreen({
   orderNumber: string;
   delivery: { from: string; to: string };
 }) {
+  const { t } = useT();
   return (
     <div className="bg-[#F5F0E8] min-h-screen">
       <div className="container-editorial py-12 lg:py-20">
@@ -501,23 +536,22 @@ function ConfirmationScreen({
             </span>
             <span className="mt-5 inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.3em] text-[#244A35]">
               <Sparkles size={13} strokeWidth={2.2} />
-              Commande confirmée
+              {t('confirm.eyebrow')}
             </span>
             <h1 className="mt-3 font-serif text-[32px] md:text-[40px] font-black uppercase leading-[0.95] tracking-tighter text-[#2D3748]">
-              Merci pour
+              {t('confirm.title.line1')}
               <br />
-              <span className="italic font-normal text-[#3D5A73]">votre confiance</span>
+              <span className="italic font-normal text-[#3D5A73]">{t('confirm.title.line2')}</span>
             </h1>
             <p className="mt-4 text-[13px] text-[#718096] leading-relaxed">
-              Un email de confirmation vient d&rsquo;être envoyé. Votre
-              commande est entre les mains de notre atelier parisien.
+              {t('confirm.subtitle')}
             </p>
           </div>
 
           <div className="mt-8 grid sm:grid-cols-2 gap-3">
             <div className="rounded-xl border border-[#EEE9E0] bg-[#FBF8F2] p-4">
               <p className="text-[9px] font-black uppercase tracking-widest text-[#A8BED4]">
-                Numéro de commande
+                {t('confirm.orderNumber')}
               </p>
               <p className="mt-1 font-serif text-[18px] font-black tracking-tighter text-[#2D3748] tabular-nums">
                 {orderNumber}
@@ -525,7 +559,7 @@ function ConfirmationScreen({
             </div>
             <div className="rounded-xl border border-[#D9E4D7] bg-[#F4FAF4] p-4">
               <p className="text-[9px] font-black uppercase tracking-widest text-[#244A35]">
-                Livraison estimée
+                {t('confirm.deliveryEstimate')}
               </p>
               <p className="mt-1 font-serif text-[15px] font-black tracking-tight text-[#2D3748]">
                 {delivery.from} – {delivery.to}
@@ -534,9 +568,9 @@ function ConfirmationScreen({
           </div>
 
           <div className="mt-8 flex flex-wrap gap-3 justify-center">
-            <Button href="/galerie">Découvrir la galerie</Button>
-            <Button href="/creer" variant="outline">
-              Composer un autre
+            <Button href="/creer">{t('confirm.composeAnother')}</Button>
+            <Button href="/" variant="outline">
+              {t('confirm.backHome')}
             </Button>
           </div>
         </div>

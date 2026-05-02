@@ -4,6 +4,7 @@ import { Camera } from 'lucide-react';
 import type { BraceletComponent } from '@/types';
 import { BEAD_BY_ID } from '@/lib/mocks/beads';
 import { CHARM_BY_ID } from '@/lib/mocks/charms';
+import { useT } from '@/lib/i18n/use-t';
 
 interface SharePreviewProps {
   components: BraceletComponent[];
@@ -77,6 +78,7 @@ export function SharePreview({
   intention,
   sizeCm = REFERENCE_SIZE_CM,
 }: SharePreviewProps) {
+  const { t } = useT();
   const scale = ellipseScale(sizeCm);
   const rx = BASE_RX * scale;
   const ry = BASE_RY * scale;
@@ -95,7 +97,7 @@ export function SharePreview({
         <div>
           <div className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#3D5A73]">
             <Camera size={14} strokeWidth={2.2} />
-            Prévisualisation
+            {t('share.previewTitle')}
           </div>
           <h3 className="mt-1 font-serif text-[20px] font-black uppercase leading-tight tracking-tight text-[#2D3748]">
             {title}
@@ -159,7 +161,7 @@ export function SharePreview({
                 fontWeight="900"
                 letterSpacing="4"
               >
-                GENEREZ UNE CREATION
+                {t('share.empty')}
               </text>
             )}
             {posterIntention && (

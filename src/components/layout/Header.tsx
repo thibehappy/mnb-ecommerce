@@ -1,10 +1,13 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, ShoppingBag, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useCart, cartCount } from '@/lib/store/cart';
+import { useLang } from '@/lib/i18n/store';
+import { useT } from '@/lib/i18n/use-t';
 import { cn } from '@/lib/utils/cn';
 
 /**
@@ -12,32 +15,38 @@ import { cn } from '@/lib/utils/cn';
  * The e-commerce app is accessed via a link on the main site's menu — so the
  * header MUST feel continuous with the main site. External anchors point back
  * to the main domain (we assume production = mynicebracelet.com).
+ *
+ * Language toggle persists in localStorage via `useLang` so the choice
+ * survives reloads and is read by the rest of the app via `useT`.
  */
 const MAIN_HOST = 'https://mynicebracelet.com';
-const NAV_ITEMS = [
-  { label: 'Accueil', href: `${MAIN_HOST}/`, external: true },
-  {
-    label: 'Ateliers',
-    href: 'https://reservation.garcapps.com/mynicebracelet',
-    external: true,
-  },
-  { label: 'Événements', href: `${MAIN_HOST}/evenements`, external: true },
-  { label: 'FAQ', href: `${MAIN_HOST}/faq`, external: true },
-];
 
 export function Header() {
   const pathname = usePathname();
   const lines = useCart((s) => s.lines);
   const openCart = useCart((s) => s.open);
   const count = cartCount(lines);
+  const { t } = useT();
+  const lang = useLang((s) => s.lang);
+  const setLang = useLang((s) => s.setLang);
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [lang, setLang] = useState<'FR' | 'EN'>('FR');
 
   // Header transparent only on the home landing (dark hero).
   // Other pages keep the header solid cream so menu items stay readable.
   const isTransparent = pathname === '/';
+
+  const NAV_ITEMS = [
+    { label: t('header.home'), href: `${MAIN_HOST}/`, external: true },
+    {
+      label: t('header.ateliers'),
+      href: 'https://reservation.garcapps.com/mynicebracelet',
+      external: true,
+    },
+    { label: t('header.events'), href: `${MAIN_HOST}/evenements`, external: true },
+    { label: t('header.faq'), href: `${MAIN_HOST}/faq`, external: true },
+  ];
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
@@ -70,8 +79,15 @@ export function Header() {
         <div className="container mx-auto px-4 md:px-6 flex justify-between items-center">
           {/* Logo — back to main site */}
           <a href={`${MAIN_HOST}/`} className="flex items-center gap-3 md:gap-4 group">
-            <div className="w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl overflow-hidden shadow-lg flex-shrink-0 bg-[#3D5A73] flex items-center justify-center">
-              <span className="font-serif font-black text-white text-[22px] md:text-[28px]">M</span>
+            <div className="relative w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl overflow-hidden shadow-lg flex-shrink-0 bg-white">
+              <Image
+                src="/logo.jpg"
+                alt="My Nice Bracelet"
+                fill
+                sizes="(max-width: 768px) 40px, 56px"
+                className="object-cover"
+                priority
+              />
             </div>
             <div className="flex flex-col">
               <span
@@ -88,7 +104,7 @@ export function Header() {
                   showSolidBg ? 'text-[#2D3748]' : 'text-white',
                 )}
               >
-                Paris Boutique
+                {t('header.parisBoutique')}
               </span>
             </div>
           </a>
@@ -139,7 +155,7 @@ export function Header() {
             <button
               type="button"
               onClick={openCart}
-              aria-label={`Panier (${count} articles)`}
+              aria-label={`${t('header.cart')} (${count})`}
               className={cn(
                 'relative ml-2 inline-flex h-10 w-10 items-center justify-center rounded-xl transition-colors',
                 showSolidBg
@@ -161,7 +177,7 @@ export function Header() {
             <button
               type="button"
               onClick={openCart}
-              aria-label={`Panier (${count} articles)`}
+              aria-label={`${t('header.cart')} (${count})`}
               className={cn(
                 'relative inline-flex h-10 w-10 items-center justify-center rounded-xl transition-colors',
                 showSolidBg ? 'text-[#2D3748]' : 'text-white',
@@ -180,7 +196,7 @@ export function Header() {
                 'p-2 rounded-xl transition-all',
                 showSolidBg ? 'text-[#2D3748]' : 'text-white',
               )}
-              aria-label="Menu"
+              aria-label={t('header.menu')}
             >
               {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
             </button>
@@ -194,7 +210,7 @@ export function Header() {
             <button
               onClick={() => setIsMenuOpen(false)}
               className="absolute top-6 right-6 text-white/50 hover:text-white"
-              aria-label="Fermer le menu"
+              aria-label={t('header.closeMenu')}
             >
               <X size={40} />
             </button>
@@ -230,7 +246,7 @@ export function Header() {
                 onClick={() => setIsMenuOpen(false)}
                 className="inline-block px-8 py-4 bg-white text-[#2D3748] rounded-xl font-black uppercase tracking-widest text-[11px] shadow-xl"
               >
-                Retour à la boutique
+                {t('header.backToShop')}
               </Link>
             </div>
           </div>

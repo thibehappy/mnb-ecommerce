@@ -5,6 +5,7 @@ import type { CartLine } from '@/types';
 import { KIT_BY_ID } from '@/lib/mocks/kits';
 import { useCart, subtotalForLine } from '@/lib/store/cart';
 import { targetMm as targetMmOf } from '@/lib/store/configurator';
+import { useT } from '@/lib/i18n/use-t';
 import { formatPrice } from '@/lib/utils/format';
 import { QuantityStepper } from '@/components/ui/QuantityStepper';
 import { KitVisual } from '@/components/ui/KitVisual';
@@ -13,6 +14,7 @@ import { BraceletPreview } from '@/components/configurator/BraceletPreview';
 export function CartLineItem({ line }: { line: CartLine }) {
   const { updateQuantity, remove } = useCart();
   const lineTotal = subtotalForLine(line);
+  const { t } = useT();
 
   if (line.kind === 'kit') {
     const kit = KIT_BY_ID[line.kitId];
@@ -23,7 +25,7 @@ export function CartLineItem({ line }: { line: CartLine }) {
           <KitVisual palette={kit.palette} name={kit.name} />
         </div>
         <div className="flex flex-col flex-1 gap-2 min-w-0">
-          <p className="text-eyebrow text-[var(--color-muted)]">Kit</p>
+          <p className="text-eyebrow text-[var(--color-muted)]">{t('cartLine.kit')}</p>
           <p className="font-serif text-[17px] truncate">{kit.name}</p>
           <p className="text-[12px] text-[var(--color-graphite)] truncate">{kit.tagline}</p>
           <div className="flex items-center justify-between mt-auto">
@@ -38,7 +40,7 @@ export function CartLineItem({ line }: { line: CartLine }) {
         <button
           type="button"
           onClick={() => remove(line.lineId)}
-          aria-label="Retirer"
+          aria-label={t('configurator.remove')}
           className="text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors self-start"
         >
           <Trash2 size={15} strokeWidth={1.4} />
@@ -47,8 +49,14 @@ export function CartLineItem({ line }: { line: CartLine }) {
     );
   }
 
+  // Reuse the configurator's fulfillment labels so the wording stays in
+  // sync with the picker. Strip the " · recommandé" / " · recommended"
+  // suffix for the cart line — that's a recommendation hint, not part of
+  // the actual product label.
   const fulfillment =
-    line.config.fulfillmentMode === 'diy-kit' ? 'Kit DIY' : 'Assemblé à Paris';
+    line.config.fulfillmentMode === 'diy-kit'
+      ? t('fulfillment.diy.label').replace(' · recommandé', '').replace(' · recommended', '')
+      : t('fulfillment.assembled.label');
 
   return (
     <div className="flex gap-4 p-4">
@@ -60,10 +68,10 @@ export function CartLineItem({ line }: { line: CartLine }) {
         />
       </div>
       <div className="flex flex-col flex-1 gap-2 min-w-0">
-        <p className="text-eyebrow text-[var(--color-muted)]">Création</p>
-        <p className="font-serif text-[17px] truncate">{line.config.title ?? 'Bracelet personnalisé'}</p>
+        <p className="text-eyebrow text-[var(--color-muted)]">{t('cartLine.creation')}</p>
+        <p className="font-serif text-[17px] truncate">{line.config.title ?? t('cartLine.titleFallback')}</p>
         <p className="text-[12px] text-[var(--color-graphite)]">
-          {line.config.components.length} éléments · taille {line.config.sizeCm}cm · {fulfillment}
+          {line.config.components.length} {t('cartLine.elements')} · {t('cartLine.size')} {line.config.sizeCm}cm · {fulfillment}
         </p>
         <div className="flex items-center justify-between mt-auto">
           <QuantityStepper
@@ -77,7 +85,7 @@ export function CartLineItem({ line }: { line: CartLine }) {
       <button
         type="button"
         onClick={() => remove(line.lineId)}
-        aria-label="Retirer"
+        aria-label={t('configurator.remove')}
         className="text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors self-start"
       >
         <Trash2 size={15} strokeWidth={1.4} />

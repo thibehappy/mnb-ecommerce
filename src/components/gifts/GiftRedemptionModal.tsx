@@ -5,6 +5,7 @@ import { Gift, KeyRound, X } from 'lucide-react';
 import { useState } from 'react';
 import { useGiftCards } from '@/lib/store/gift-cards';
 import { formatGiftCodeInput, normalizeGiftCode } from '@/lib/utils/gift-code';
+import { useT } from '@/lib/i18n/use-t';
 import { haptic } from '@/lib/utils/feedback';
 
 interface GiftRedemptionModalProps {
@@ -25,6 +26,7 @@ export function GiftRedemptionModal({ open, onClose, onRedeem }: GiftRedemptionM
   const [raw, setRaw] = useState('');
   const [error, setError] = useState<string | null>(null);
   const getByCode = useGiftCards((s) => s.getByCode);
+  const { t } = useT();
 
   function handleClose() {
     onClose();
@@ -37,12 +39,12 @@ export function GiftRedemptionModal({ open, onClose, onRedeem }: GiftRedemptionM
   function handleSubmit() {
     const code = normalizeGiftCode(raw);
     if (!code) {
-      setError('Format invalide. Le code ressemble à MNB-XXXX-XXXX.');
+      setError(t('giftRedeem.invalidFormat'));
       return;
     }
     const card = getByCode(code);
     if (!card) {
-      setError('Ce code est inconnu ou a été créé sur un autre appareil.');
+      setError(t('giftRedeem.notFound'));
       return;
     }
     haptic([6, 18, 6]);
@@ -73,7 +75,7 @@ export function GiftRedemptionModal({ open, onClose, onRedeem }: GiftRedemptionM
             <button
               type="button"
               onClick={handleClose}
-              aria-label="Fermer"
+              aria-label={t('unboxing.close')}
               className="absolute right-4 top-4 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full text-[#718096] transition-colors hover:bg-[#F5F0E8] hover:text-[#2D3748]"
             >
               <X size={17} strokeWidth={2} />
@@ -82,18 +84,17 @@ export function GiftRedemptionModal({ open, onClose, onRedeem }: GiftRedemptionM
             <div className="p-6 md:p-7">
               <div className="mb-4 inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#3D5A73]">
                 <Gift size={14} strokeWidth={2.2} />
-                Ouvrir une carte cadeau
+                {t('giftRedeem.eyebrow')}
               </div>
               <h3 className="font-serif text-[22px] md:text-[24px] font-black uppercase leading-none tracking-tight text-[#2D3748]">
-                Saisissez votre code
+                {t('giftRedeem.title')}
               </h3>
               <p className="mt-2 text-[12px] font-semibold text-[#718096]">
-                Le code se trouve sur votre carte cadeau ou dans le message
-                qui vous a été envoyé.
+                {t('giftRedeem.subtitle')}
               </p>
 
               <label htmlFor="gift-code" className="sr-only">
-                Code cadeau
+                {t('giftConfirm.codeLabel')}
               </label>
               <div className="mt-5 flex h-14 items-center gap-2 rounded-xl border border-[#EEE9E0] bg-[#F5F0E8] px-3 transition-colors focus-within:border-[#3D5A73] focus-within:bg-white">
                 <KeyRound size={16} strokeWidth={2} className="text-[#A8BED4]" />
@@ -114,7 +115,7 @@ export function GiftRedemptionModal({ open, onClose, onRedeem }: GiftRedemptionM
                       handleSubmit();
                     }
                   }}
-                  placeholder="MNB-XXXX-XXXX"
+                  placeholder={t('giftRedeem.placeholder')}
                   className="h-full flex-1 bg-transparent font-serif text-[18px] font-black tracking-[0.18em] text-[#2D3748] tabular-nums outline-none placeholder:text-[#A8BED4] placeholder:tracking-widest"
                 />
               </div>
@@ -128,7 +129,7 @@ export function GiftRedemptionModal({ open, onClose, onRedeem }: GiftRedemptionM
                   onClick={handleClose}
                   className="h-11 rounded-lg border border-[#EEE9E0] bg-white text-[10px] font-black uppercase tracking-widest text-[#3D5A73] transition-colors hover:border-[#3D5A73]"
                 >
-                  Annuler
+                  {t('giftRedeem.cancel')}
                 </button>
                 <button
                   type="button"
@@ -136,7 +137,7 @@ export function GiftRedemptionModal({ open, onClose, onRedeem }: GiftRedemptionM
                   className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#2D3748] text-[10px] font-black uppercase tracking-widest text-white transition-colors hover:bg-[#3D5A73]"
                 >
                   <Gift size={13} strokeWidth={2.2} />
-                  Ouvrir
+                  {t('giftRedeem.open')}
                 </button>
               </div>
             </div>

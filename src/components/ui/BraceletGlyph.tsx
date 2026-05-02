@@ -3,6 +3,7 @@
 import type { BraceletComponent } from '@/types';
 import { BEAD_BY_ID } from '@/lib/mocks/beads';
 import { CHARM_BY_ID } from '@/lib/mocks/charms';
+import { useT } from '@/lib/i18n/use-t';
 
 interface BraceletGlyphProps {
   components: BraceletComponent[];
@@ -21,7 +22,8 @@ interface GlyphItem {
 }
 
 /**
- * Compact SVG preview of a bracelet — designed for the gallery card.
+ * Compact SVG preview of a bracelet — used wherever we need a small
+ * glyph (cart line items, etc.).
  *
  * Like SharePreview, every bead is dropped onto the bracelet at the same
  * uniform size with a common ×3 photo zoom. We deliberately do NOT scale by
@@ -48,6 +50,7 @@ export function BraceletGlyph({
   figurine,
   sizeCm = REFERENCE_SIZE_CM,
 }: BraceletGlyphProps) {
+  const { t } = useT();
   const scale = ellipseScale(sizeCm);
   const rx = BASE_RX * scale;
   const ry = BASE_RY * scale;
@@ -111,7 +114,7 @@ export function BraceletGlyph({
           fontWeight="900"
           letterSpacing="3"
         >
-          AUCUNE PERLE
+          {t('preview.noBeads')}
         </text>
       )}
     </svg>

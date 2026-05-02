@@ -350,33 +350,6 @@ export interface GiftCard {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Galerie (shared bracelets feed)
-───────────────────────────────────────────────────────────── */
-/**
- * A bracelet that's been published to the public community gallery.
- * Independent of the cart / gift card systems — purely a social feed
- * powered by user shares.
- */
-export interface SharedBracelet {
-  id: UUID;
-  /** Title chosen by the creator (defaults to "Ma création"). */
-  title: string;
-  /** Optional creator name — pulled from the share modal name field. */
-  creator?: string;
-  atelierId: UUID;
-  sizeCm: number;
-  sizeLabel: SizeLabel;
-  /** Snapshot of the components at publish time. Decoupled from the
-   *  configurator's working state — re-editing the bracelet in the
-   *  configurator does not retroactively change the gallery entry. */
-  components: BraceletComponent[];
-  figurine?: BraceletComponent | null;
-  votesUp: number;
-  votesDown: number;
-  createdAt: ISODate;
-}
-
-/* ─────────────────────────────────────────────────────────────
    Boutique (physical store)
 ───────────────────────────────────────────────────────────── */
 export interface Boutique {

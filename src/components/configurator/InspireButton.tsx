@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useConfigurator } from '@/lib/store/configurator';
 import { AVAILABLE_MOODS, moodLabel, type Mood } from '@/lib/harmony/rules';
+import { useT } from '@/lib/i18n/use-t';
 import { haptic } from '@/lib/utils/feedback';
 import { cn } from '@/lib/utils/cn';
 
@@ -41,6 +42,7 @@ const MOOD_DESCRIPTIONS: Record<Mood, string> = {
 export function RandomDiceButton() {
   const applyInspired = useConfigurator((s) => s.applyInspired);
   const [spin, setSpin] = useState(0);
+  const { t } = useT();
 
   return (
     <button
@@ -50,8 +52,8 @@ export function RandomDiceButton() {
         applyInspired();
         setSpin((s) => s + 1);
       }}
-      aria-label="Générer un bracelet aléatoire"
-      title="Bracelet aléatoire"
+      aria-label={t('inspire.label')}
+      title={t('inspire.label')}
       className="group inline-flex items-center justify-center gap-2 h-10 px-4 rounded-full bg-white/85 backdrop-blur-md border border-[#EEE9E0] text-[#3D5A73] hover:text-[#2D3748] hover:bg-white hover:border-[#3D5A73] active:scale-95 transition-all shadow-sm"
     >
       <motion.span
@@ -77,6 +79,7 @@ export function StylesButton() {
   const [open, setOpen] = useState(false);
   const [lastMood, setLastMood] = useState<Mood | null>(null);
   const [mounted, setMounted] = useState(false);
+  const { t } = useT();
 
   useEffect(() => setMounted(true), []);
 
@@ -111,7 +114,7 @@ export function StylesButton() {
         className="inline-flex items-center gap-2 h-10 px-4 rounded-full bg-[#3D5A73] hover:bg-[#2A3F50] text-white text-[10px] uppercase tracking-widest font-black shadow-md hover:shadow-lg active:scale-95 transition-all"
       >
         <Sparkles size={14} strokeWidth={2.2} />
-        {lastMood ? `Style · ${moodLabel(lastMood)}` : 'Styles'}
+        {lastMood ? `Style · ${moodLabel(lastMood)}` : t('inspire.styles')}
       </button>
 
       {mounted &&

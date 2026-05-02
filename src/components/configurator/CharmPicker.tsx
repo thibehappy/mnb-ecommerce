@@ -7,19 +7,8 @@ import { useConfigurator, canFit, countCharms } from '@/lib/store/configurator';
 import { CharmGlyph } from '@/components/ui/CharmGlyph';
 import type { CharmCategory } from '@/types';
 import { haptic } from '@/lib/utils/feedback';
+import { useT } from '@/lib/i18n/use-t';
 import { cn } from '@/lib/utils/cn';
-
-const CATEGORY_LABELS: Record<CharmCategory, string> = {
-  lettre: 'Lettres',
-  coeur: 'Cœurs',
-  etoile: 'Étoiles',
-  animal: 'Animaux',
-  kawaii: 'Kawaii',
-  symbole: 'Symboles',
-  fleur: 'Fleurs',
-  lune: 'Lunes',
-  noeud: 'Nœuds',
-};
 
 interface CharmPickerProps {
   onTilePointerDown?: (refId: string, e: React.PointerEvent) => void;
@@ -33,6 +22,7 @@ export function CharmPicker({ onTilePointerDown }: CharmPickerProps = {}) {
   const components = useConfigurator((s) => s.components);
   const figurine = useConfigurator((s) => s.figurine);
   const atelier = ATELIER_BY_ID[atelierId];
+  const { t } = useT();
 
   const [category, setCategory] = useState<CharmCategory | null>(null);
 
@@ -67,7 +57,7 @@ export function CharmPicker({ onTilePointerDown }: CharmPickerProps = {}) {
   if (!atelier?.allowCharms) {
     return (
       <div className="text-center py-8">
-        <p className="text-[14px] text-[#718096] italic">Cet atelier ne comprend pas de charms.</p>
+        <p className="text-[14px] text-[#718096] italic">{t('charm.notAvailable')}</p>
       </div>
     );
   }
@@ -77,12 +67,12 @@ export function CharmPicker({ onTilePointerDown }: CharmPickerProps = {}) {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="text-xl md:text-2xl font-serif font-black text-[#2D3748] uppercase tracking-tighter mb-1">
-            {isKawaii ? 'Ajoutez une figurine' : 'Ajoutez des charms'}
+            {isKawaii ? t('charm.title.kawaii') : t('charm.title.classic')}
           </h3>
           <p className="text-[13px] text-[#718096] italic">
             {isKawaii
-              ? 'Optionnel. Une figurine vient se fixer à côté du bracelet.'
-              : `Optionnel. Jusqu’à ${max} charm${max > 1 ? 's' : ''}.`}
+              ? t('charm.subtitle.kawaii')
+              : t(max > 1 ? 'charm.subtitle.classicPlural' : 'charm.subtitle.classicSingular', max)}
           </p>
         </div>
         <div
@@ -100,15 +90,15 @@ export function CharmPicker({ onTilePointerDown }: CharmPickerProps = {}) {
       {categories.length > 1 && (
         <div>
           <p className="text-[9px] font-black uppercase tracking-widest text-[#A8BED4] mb-2">
-            Catégorie
+            {t('charm.category.label')}
           </p>
           <div className="flex flex-wrap gap-1.5">
             <Chip active={!category} onClick={() => setCategory(null)}>
-              Tous
+              {t('charm.category.all')}
             </Chip>
             {categories.map((cat) => (
               <Chip key={cat} active={category === cat} onClick={() => setCategory(cat)}>
-                {CATEGORY_LABELS[cat]}
+                {t(`charmCategory.${cat}`)}
               </Chip>
             ))}
           </div>
@@ -119,12 +109,10 @@ export function CharmPicker({ onTilePointerDown }: CharmPickerProps = {}) {
         {filtered.length === 0 ? (
           <div className="rounded-xl border border-dashed border-[#EEE9E0] bg-[#F5F0E8]/60 px-4 py-8 text-center">
             <p className="text-[12px] font-black uppercase tracking-widest text-[#A8BED4] mb-1">
-              Section vide
+              {t('charm.empty.title')}
             </p>
             <p className="text-[13px] text-[#718096] italic">
-              {isKawaii
-                ? 'Aucune figurine disponible pour le moment.'
-                : 'Aucun charm disponible pour le moment.'}
+              {isKawaii ? t('charm.empty.figurines') : t('charm.empty.charms')}
             </p>
           </div>
         ) : (
@@ -166,7 +154,7 @@ export function CharmPicker({ onTilePointerDown }: CharmPickerProps = {}) {
                       ? 'cursor-pointer'
                       : 'touch-manipulation md:cursor-grab md:active:cursor-grabbing',
                   )}
-                  aria-label={isSelected ? `Retirer ${charm.name}` : `Choisir ${charm.name}`}
+                  aria-label={`${isSelected ? t('charm.removeAria') : t('charm.choose')} ${charm.name}`}
                 >
                   <div className="transition-transform duration-300 group-hover:scale-110 h-14 w-14 flex items-center justify-center">
                     <CharmGlyph

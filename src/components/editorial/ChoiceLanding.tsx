@@ -46,7 +46,7 @@ export function ChoiceLanding() {
               href="/creer"
               label="Le kit personnalisé"
               title="Je compose mon bracelet"
-              description="Vous choisissez chaque pierre, chaque charm. À la fin, recevez votre kit à monter chez vous, ou directement votre bracelet déjà assemblé par nos artisanes."
+              description="Vous choisissez chaque pierre, chaque charm. À la fin, recevez votre kit à monter chez vous, ou directement votre bracelet assemblé à Paris par nos soins."
               ctaLabel="Ouvrir le configurateur"
               icon={<Wand2 size={14} strokeWidth={2} />}
               image="/photos/atelier-bracelet-bar.jpg"
@@ -56,17 +56,20 @@ export function ChoiceLanding() {
           </div>
 
           <div className="mt-14 md:mt-16 flex flex-wrap items-center justify-center gap-x-8 md:gap-x-14 gap-y-4 text-white/60">
-            {['Fait à Paris', 'Pierres semi-précieuses', 'Livraison rapide', 'Paiement sécurisé'].map(
-              (label) => (
-                <span
-                  key={label}
-                  className="text-[10px] md:text-[11px] font-black uppercase tracking-[0.3em] inline-flex items-center gap-3"
-                >
-                  <span className="w-1 h-1 rounded-full bg-[#A8BED4]" />
-                  {label}
-                </span>
-              ),
-            )}
+            {[
+              'Assemblé à Paris',
+              'Pierres semi-précieuses',
+              'Livraison rapide',
+              'Paiement sécurisé',
+            ].map((label) => (
+              <span
+                key={label}
+                className="text-[10px] md:text-[11px] font-black uppercase tracking-[0.3em] inline-flex items-center gap-3"
+              >
+                <span className="w-1 h-1 rounded-full bg-[#A8BED4]" />
+                {label}
+              </span>
+            ))}
           </div>
         </div>
       </section>

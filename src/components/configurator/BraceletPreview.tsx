@@ -627,6 +627,29 @@ export const BraceletPreview = forwardRef<BraceletPreviewHandle, Props>(function
           onPointerMove={drag ? handlePointerMove : undefined}
         >
           <defs>
+            <linearGradient id="mnb-cord-gradient" x1="0%" x2="100%" y1="0%" y2="0%">
+              <stop offset="0%" stopColor="#A8BED4" stopOpacity="0.28" />
+              <stop offset="48%" stopColor="#3D5A73" stopOpacity="0.5" />
+              <stop offset="100%" stopColor="#A8BED4" stopOpacity="0.28" />
+            </linearGradient>
+            <filter id="mnb-cord-shadow" x="-20%" y="-80%" width="140%" height="260%">
+              <feDropShadow
+                dx="0"
+                dy="12"
+                stdDeviation="12"
+                floodColor="#2D3748"
+                floodOpacity="0.1"
+              />
+            </filter>
+            <filter id="mnb-bead-shadow" x="-45%" y="-45%" width="190%" height="190%">
+              <feDropShadow
+                dx="0"
+                dy="9"
+                stdDeviation="7"
+                floodColor="#2D3748"
+                floodOpacity="0.18"
+              />
+            </filter>
             <filter id="mnb-glow" x="-40%" y="-40%" width="180%" height="180%">
               <feGaussianBlur stdDeviation="4" result="b" />
               <feMerge>
@@ -637,7 +660,7 @@ export const BraceletPreview = forwardRef<BraceletPreviewHandle, Props>(function
           </defs>
 
           {/* Cord — always shown (the bracelet skeleton) */}
-          <Cord variant={variant} width={width} height={height} />
+          <Cord variant={variant} width={width} height={height} hasComponents={!isEmpty} />
 
           {/* Placeholder ghosts — visual hints for where additional beads can
              go on the remaining cord. Pure decoration : they don't capture
@@ -863,7 +886,7 @@ export const BraceletPreview = forwardRef<BraceletPreviewHandle, Props>(function
               // clicking on one selects exactly that one. The visual content
               // (photo with its 3× bleed) is rendered with pointer-events
               // disabled so it can't steal clicks from neighbours.
-              const hitR = coreR + 2;
+              const hitR = coreR + 4;
 
               if (comp.kind === 'bead') {
                 const bead = BEAD_BY_ID[comp.refId];
@@ -872,25 +895,33 @@ export const BraceletPreview = forwardRef<BraceletPreviewHandle, Props>(function
                   <g key={comp.slotId} {...common}>
                     {/* Visual layer — decoration only, no hit. */}
                     <g pointerEvents="none">
+                      <ellipse
+                        cx="0"
+                        cy={coreR * 0.78}
+                        rx={coreR * 0.72}
+                        ry={Math.max(2.2, coreR * 0.16)}
+                        fill="#2D3748"
+                        opacity={isDragged ? 0.06 : 0.1}
+                      />
                       {isSelected && !isDragged && (
-                        <circle r={coreR + 6} fill="#A8BED4" fillOpacity="0.45">
+                        <circle r={coreR + 5} fill="#FFFFFF" fillOpacity="0.72">
                           <animate
                             attributeName="r"
-                            values={`${coreR + 4};${coreR + 10};${coreR + 4}`}
-                            dur="1.6s"
+                            values={`${coreR + 4};${coreR + 7};${coreR + 4}`}
+                            dur="1.8s"
                             repeatCount="indefinite"
                           />
                           <animate
                             attributeName="fill-opacity"
-                            values="0.55;0.15;0.55"
-                            dur="1.6s"
+                            values="0.72;0.24;0.72"
+                            dur="1.8s"
                             repeatCount="indefinite"
                           />
                         </circle>
                       )}
                       {/* Rotate the bead photo so its drilled hole follows the tangent. */}
                       <g
-                        filter={isSelected && !isDragged ? 'url(#mnb-glow)' : undefined}
+                        filter={isSelected && !isDragged ? 'url(#mnb-glow)' : 'url(#mnb-bead-shadow)'}
                         transform={`rotate(${pos.rot})`}
                       >
                         <BeadShape
@@ -903,7 +934,7 @@ export const BraceletPreview = forwardRef<BraceletPreviewHandle, Props>(function
                         />
                       </g>
                       {isSelected && !isDragged && (
-                        <circle r={coreR + 2} fill="none" stroke="#3D5A73" strokeWidth="1.5" />
+                        <circle r={coreR + 2} fill="none" stroke="#3D5A73" strokeWidth="1.35" />
                       )}
                     </g>
                     {/* Hit area — invisible circle matching the visible bead. */}
@@ -917,17 +948,25 @@ export const BraceletPreview = forwardRef<BraceletPreviewHandle, Props>(function
               return (
                 <g key={comp.slotId} {...common}>
                   <g pointerEvents="none">
+                    <ellipse
+                      cx="0"
+                      cy={coreR * 0.78}
+                      rx={coreR * 0.78}
+                      ry={Math.max(2.5, coreR * 0.18)}
+                      fill="#2D3748"
+                      opacity={isDragged ? 0.06 : 0.1}
+                    />
                     {isSelected && !isDragged && (
-                      <circle r={coreR + 6} fill="#A8BED4" fillOpacity="0.45">
+                      <circle r={coreR + 5} fill="#FFFFFF" fillOpacity="0.72">
                         <animate
                           attributeName="r"
-                          values={`${coreR + 4};${coreR + 10};${coreR + 4}`}
-                          dur="1.6s"
+                          values={`${coreR + 4};${coreR + 7};${coreR + 4}`}
+                          dur="1.8s"
                           repeatCount="indefinite"
                         />
                       </circle>
                     )}
-                    <g filter={isSelected && !isDragged ? 'url(#mnb-glow)' : undefined}>
+                    <g filter={isSelected && !isDragged ? 'url(#mnb-glow)' : 'url(#mnb-bead-shadow)'}>
                       <CharmShape
                         radius={radius}
                         category={charm.category}
@@ -958,21 +997,45 @@ export const BraceletPreview = forwardRef<BraceletPreviewHandle, Props>(function
   );
 });
 
-function Cord({ variant, width, height }: { variant: Variant; width: number; height: number }) {
+function Cord({
+  variant,
+  width,
+  height,
+  hasComponents,
+}: {
+  variant: Variant;
+  width: number;
+  height: number;
+  hasComponents: boolean;
+}) {
+  const dash = hasComponents ? undefined : '2 4';
+  const opacity = hasComponents ? 0.88 : 0.58;
   if (variant === 'flat') {
     const y = height / 2;
     return (
-      <line
-        x1={60}
-        y1={y}
-        x2={width - 60}
-        y2={y}
-        stroke="#A8BED4"
-        strokeWidth="2"
-        strokeDasharray="2 4"
-        strokeLinecap="round"
-        opacity="0.8"
-      />
+      <g filter="url(#mnb-cord-shadow)">
+        <line
+          x1={60}
+          y1={y}
+          x2={width - 60}
+          y2={y}
+          stroke="#FFFFFF"
+          strokeWidth="9"
+          strokeLinecap="round"
+          opacity="0.55"
+        />
+        <line
+          x1={60}
+          y1={y}
+          x2={width - 60}
+          y2={y}
+          stroke="url(#mnb-cord-gradient)"
+          strokeWidth={hasComponents ? '3.2' : '2.4'}
+          strokeDasharray={dash}
+          strokeLinecap="round"
+          opacity={opacity}
+        />
+      </g>
     );
   }
   if (variant === 'u') {
@@ -984,15 +1047,25 @@ function Cord({ variant, width, height }: { variant: Variant; width: number; hei
       `L ${xRight} ${yTop}`,
     ].join(' ');
     return (
-      <path
-        d={d}
-        fill="none"
-        stroke="#A8BED4"
-        strokeWidth="2"
-        strokeDasharray="2 4"
-        strokeLinecap="round"
-        opacity="0.8"
-      />
+      <g filter="url(#mnb-cord-shadow)">
+        <path
+          d={d}
+          fill="none"
+          stroke="#FFFFFF"
+          strokeWidth="9"
+          strokeLinecap="round"
+          opacity="0.55"
+        />
+        <path
+          d={d}
+          fill="none"
+          stroke="url(#mnb-cord-gradient)"
+          strokeWidth={hasComponents ? '3.2' : '2.4'}
+          strokeDasharray={dash}
+          strokeLinecap="round"
+          opacity={opacity}
+        />
+      </g>
     );
   }
   // Same geometry as loopPath — keep the cord and the bead positions in sync.
@@ -1000,16 +1073,27 @@ function Cord({ variant, width, height }: { variant: Variant; width: number; hei
   const rx = width * 0.39;
   const ry = 294;
   const cy = height / 2 + ry / 2;
+  const d = `M ${cx - rx} ${cy} A ${rx} ${ry} 0 0 1 ${cx + rx} ${cy}`;
   return (
-    <path
-      d={`M ${cx - rx} ${cy} A ${rx} ${ry} 0 0 1 ${cx + rx} ${cy}`}
-      fill="none"
-      stroke="#A8BED4"
-      strokeWidth="2"
-      strokeDasharray="2 4"
-      strokeLinecap="round"
-      opacity="0.8"
-    />
+    <g filter="url(#mnb-cord-shadow)">
+      <path
+        d={d}
+        fill="none"
+        stroke="#FFFFFF"
+        strokeWidth="9"
+        strokeLinecap="round"
+        opacity="0.55"
+      />
+      <path
+        d={d}
+        fill="none"
+        stroke="url(#mnb-cord-gradient)"
+        strokeWidth={hasComponents ? '3.2' : '2.4'}
+        strokeDasharray={dash}
+        strokeLinecap="round"
+        opacity={opacity}
+      />
+    </g>
   );
 }
 

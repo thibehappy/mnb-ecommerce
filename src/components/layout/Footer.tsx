@@ -21,7 +21,8 @@ export function Footer() {
               my nice bracelet
             </h2>
             <p className="text-[#D6E0EC] text-sm italic leading-relaxed font-medium text-center md:text-left">
-              Bijoux personnalisés, faits à Paris. Composez votre bracelet en boutique ou en ligne.
+              Bijoux personnalisés, assemblés à Paris par nos soins. Composez votre bracelet en
+              boutique ou en ligne.
             </p>
           </div>
 

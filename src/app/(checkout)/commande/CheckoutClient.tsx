@@ -210,7 +210,16 @@ export function CheckoutClient() {
                       ? (KIT_BY_ID[line.kitId]?.name ?? '—')
                       : (line.config.title ?? 'Création personnalisée')}
                   </p>
-                  <p className="text-[11px] text-[var(--color-muted)]">Quantité {line.quantity}</p>
+                  <p className="text-[11px] text-[var(--color-muted)]">
+                    Quantité {line.quantity}
+                    {line.kind === 'custom'
+                      ? ` · ${
+                          line.config.fulfillmentMode === 'diy-kit'
+                            ? 'Kit DIY'
+                            : 'Assemblé à Paris'
+                        }`
+                      : ''}
+                  </p>
                 </div>
                 <span className="tabular-nums text-[14px]">
                   {formatPrice(subtotalForLine(line))}

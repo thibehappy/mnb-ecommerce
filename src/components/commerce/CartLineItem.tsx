@@ -47,6 +47,9 @@ export function CartLineItem({ line }: { line: CartLine }) {
     );
   }
 
+  const fulfillment =
+    line.config.fulfillmentMode === 'diy-kit' ? 'Kit DIY' : 'Assemblé à Paris';
+
   return (
     <div className="flex gap-4 p-4">
       <div className="w-28 shrink-0 bg-[var(--color-canvas)] rounded-sm flex items-center">
@@ -60,7 +63,7 @@ export function CartLineItem({ line }: { line: CartLine }) {
         <p className="text-eyebrow text-[var(--color-muted)]">Création</p>
         <p className="font-serif text-[17px] truncate">{line.config.title ?? 'Bracelet personnalisé'}</p>
         <p className="text-[12px] text-[var(--color-graphite)]">
-          {line.config.components.length} éléments · taille {line.config.sizeCm}cm
+          {line.config.components.length} éléments · taille {line.config.sizeCm}cm · {fulfillment}
         </p>
         <div className="flex items-center justify-between mt-auto">
           <QuantityStepper

@@ -68,11 +68,11 @@ export function BeadPicker({ onTilePointerDown }: BeadPickerProps = {}) {
     fit.status === 'empty'
       ? `Encore ${formatCmFromMm(targetMm)} pour une taille parfaite`
       : fit.status === 'ready'
-        ? 'Ajustement parfait. Vous pouvez commander ou retirer une perle pour changer.'
+        ? 'Votre bracelet est complet et parfaitement équilibré. Finalisons votre création.'
         : fit.status === 'too-long'
-          ? `Trop long de ${formatCmFromMm(fit.overflowMm)}. Retirez une perle.`
+          ? 'Retirez une perle pour retrouver une composition équilibrée.'
           : atLimit
-            ? 'Plus de place disponible. Retirez une perle pour changer.'
+            ? 'Votre bracelet est complet et parfaitement équilibré. Finalisons votre création.'
             : `Encore ${formatCmFromMm(fit.remainingMm)} pour une taille parfaite`;
 
   return (
@@ -141,6 +141,7 @@ export function BeadPicker({ onTilePointerDown }: BeadPickerProps = {}) {
                   disabled={disabled}
                   onPointerDown={(e) => {
                     if (disabled) return;
+                    if (e.pointerType === 'touch') return;
                     onTilePointerDown?.(bead.id, e);
                   }}
                   onClick={() => {
@@ -148,7 +149,7 @@ export function BeadPicker({ onTilePointerDown }: BeadPickerProps = {}) {
                     addBead(bead.id);
                     haptic(4);
                   }}
-                  className="group relative aspect-square flex flex-col items-center justify-center gap-1.5 p-2 md:p-3 bg-[#F5F0E8] rounded-xl md:rounded-2xl border border-transparent hover:border-[#3D5A73] hover:bg-white hover:shadow-md active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-transparent disabled:hover:bg-[#F5F0E8] disabled:hover:shadow-none cursor-grab active:cursor-grabbing touch-none select-none"
+                  className="group relative aspect-square flex flex-col items-center justify-center gap-1.5 p-2 md:p-3 bg-[#F5F0E8] rounded-xl md:rounded-2xl border border-transparent hover:border-[#3D5A73] hover:bg-white hover:shadow-md active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-transparent disabled:hover:bg-[#F5F0E8] disabled:hover:shadow-none touch-manipulation select-none md:cursor-grab md:active:cursor-grabbing"
                   aria-label={`Ajouter ${bead.name}`}
                 >
                   {variant ? (

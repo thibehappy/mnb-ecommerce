@@ -1,13 +1,10 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
+import { createPortal } from 'react-dom';
 import {
-  ArrowLeft,
-  Camera,
   Check,
   Copy,
-  Gift,
-  Globe2,
   Heart,
   MessageCircle,
   Minus,
@@ -19,12 +16,10 @@ import {
   ShoppingBag,
   Sparkles,
   Trash2,
-  Users,
   Wand2,
   X,
   ZoomIn,
   ZoomOut,
-  type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -41,26 +36,23 @@ import {
   type SharedBraceletDesign,
 } from '@/lib/store/configurator';
 import { useCart } from '@/lib/store/cart';
-import { ATELIER_BY_ID } from '@/lib/mocks/ateliers';
-import { BEAD_BY_ID, BEADS } from '@/lib/mocks/beads';
+import { ATELIER_BY_ID, ATELIERS } from '@/lib/mocks/ateliers';
 import { BraceletPreview, type BraceletPreviewHandle } from './BraceletPreview';
 import { BeadPicker } from './BeadPicker';
 import { CharmPicker } from './CharmPicker';
 import { InspireButton } from './InspireButton';
 import { DragGhost } from './DragGhost';
 import { SharePreview } from './SharePreview';
-import { CreationCoach } from './CreationCoach';
-import { DuoSplitPreview } from './DuoSplitPreview';
 import { CompositionTray } from './CompositionTray';
 import { StoneSwatch } from '@/components/ui/StoneSwatch';
 import { CharmGlyph } from '@/components/ui/CharmGlyph';
 import { beadPhotoZoom } from '@/lib/utils/bead-display';
-import { formatCmFromMm, formatPrice, uid } from '@/lib/utils/format';
+import { formatCmFromMm, formatPrice } from '@/lib/utils/format';
 import { cn } from '@/lib/utils/cn';
 import { atelierSound, haptic, successMoment } from '@/lib/utils/feedback';
 import { encodeBraceletDesign } from '@/lib/utils/share-design';
-import { analyzeBraceletDesign, type CoachAction } from '@/lib/harmony/coach';
 import { moodLabel, type Mood } from '@/lib/harmony/rules';
+import type { FulfillmentMode } from '@/types';
 
 const TABS = [
   { id: 'beads' as const, label: 'Perles' },
@@ -79,58 +71,12 @@ interface PaletteDrag {
 
 const DRAG_THRESHOLD = 5;
 
-type StudioAudience = 'self' | 'gift' | 'friends' | 'couple';
-type StudioIntent = 'memory' | 'energy' | 'minimal' | 'viral';
-type RemixFilter = 'all' | 'trending' | 'gift' | 'duo' | 'minimal' | 'kawaii';
-
-const STUDIO_AUDIENCES: Array<{
-  id: StudioAudience;
-  label: string;
-  icon: LucideIcon;
-}> = [
-  { id: 'self', label: 'Moi', icon: Heart },
-  { id: 'gift', label: 'Cadeau', icon: Gift },
-  { id: 'friends', label: 'Amies', icon: Users },
-  { id: 'couple', label: 'Duo', icon: Heart },
-];
-
-const STUDIO_INTENTS: Array<{
-  id: StudioIntent;
-  label: string;
-  mood: Mood;
-  intention: string;
-}> = [
-  {
-    id: 'memory',
-    label: 'Souvenir',
-    mood: 'jardin',
-    intention: 'Un souvenir à porter tous les jours.',
-  },
-  {
-    id: 'energy',
-    label: 'Énergie',
-    mood: 'mystique',
-    intention: 'Une intention douce, protectrice et lumineuse.',
-  },
-  {
-    id: 'minimal',
-    label: 'Minimal',
-    mood: 'minimaliste',
-    intention: 'Une pièce discrète, nette et intemporelle.',
-  },
-  {
-    id: 'viral',
-    label: 'TikTok',
-    mood: 'kawaii',
-    intention: 'Une composition joyeuse, expressive et prête à partager.',
-  },
-];
+type RemixFilter = 'all' | 'trending' | 'minimal' | 'kawaii';
 
 const WORLD_REMIXES: Array<{
   id: string;
   title: string;
   mood: Mood;
-  audience: StudioAudience;
   filter: Exclude<RemixFilter, 'all'>;
   intention: string;
   creator: string;
@@ -144,7 +90,6 @@ const WORLD_REMIXES: Array<{
     id: 'riviera',
     title: 'Riviera 17',
     mood: 'jardin',
-    audience: 'self',
     filter: 'trending',
     intention: 'Un été bleu-vert, façonné à Paris.',
     creator: 'Atelier Louvre',
@@ -155,24 +100,9 @@ const WORLD_REMIXES: Array<{
     colors: ['#7CADA6', '#F5EDE0', '#9BC4A8'],
   },
   {
-    id: 'midnight',
-    title: 'Midnight Gift',
-    mood: 'nuit',
-    audience: 'gift',
-    filter: 'gift',
-    intention: 'Un cadeau calme, profond, presque secret.',
-    creator: 'MNB Studio',
-    city: 'New York',
-    story: 'Contraste sombre, touches lunaires, parfait pour un cadeau élégant.',
-    remixes: 316,
-    likes: 1240,
-    colors: ['#1A1A1A', '#3B5A7A', '#DCD4CC'],
-  },
-  {
     id: 'soft-power',
     title: 'Soft Power',
     mood: 'romantique',
-    audience: 'friends',
     filter: 'kawaii',
     intention: 'Une douceur assumée, à porter en accumulation.',
     creator: 'Camille',
@@ -183,24 +113,9 @@ const WORLD_REMIXES: Array<{
     colors: ['#D4A8A0', '#F5EDE0', '#8B6F9B'],
   },
   {
-    id: 'solar-club',
-    title: 'Solar Club',
-    mood: 'solaire',
-    audience: 'couple',
-    filter: 'duo',
-    intention: 'Une capsule chaude et solaire, faite pour rayonner.',
-    creator: 'Nina & Lou',
-    city: 'Nice',
-    story: 'Un bracelet à splitter en duo, très chaud, très été.',
-    remixes: 274,
-    likes: 980,
-    colors: ['#B8823C', '#E89060', '#D4A855'],
-  },
-  {
     id: 'quiet-pearl',
     title: 'Quiet Pearl',
     mood: 'minimaliste',
-    audience: 'self',
     filter: 'minimal',
     intention: 'Une signature simple, lumineuse, jamais trop visible.',
     creator: 'Mina',
@@ -214,7 +129,6 @@ const WORLD_REMIXES: Array<{
     id: 'mystic-note',
     title: 'Mystic Note',
     mood: 'mystique',
-    audience: 'gift',
     filter: 'trending',
     intention: 'Une intention douce, protectrice et presque talisman.',
     creator: 'Léna',
@@ -229,95 +143,32 @@ const WORLD_REMIXES: Array<{
 const REMIX_FILTERS: Array<{ id: RemixFilter; label: string }> = [
   { id: 'all', label: 'Tous' },
   { id: 'trending', label: 'Tendance' },
-  { id: 'gift', label: 'Cadeau' },
-  { id: 'duo', label: 'Duo' },
   { id: 'minimal', label: 'Minimal' },
   { id: 'kawaii', label: 'Kawaii' },
 ];
 
-function moodForGuide(audience: StudioAudience, intent: StudioIntent): Mood {
-  if (audience === 'gift' && intent === 'memory') return 'romantique';
-  if (audience === 'friends' && intent === 'viral') return 'kawaii';
-  if (audience === 'couple' && intent === 'minimal') return 'minimaliste';
-  return STUDIO_INTENTS.find((item) => item.id === intent)?.mood ?? 'jardin';
-}
-
-function titleForGuide(audience: StudioAudience, intent: StudioIntent): string {
-  const audienceLabel = STUDIO_AUDIENCES.find((item) => item.id === audience)?.label ?? 'Moi';
-  const intentLabel = STUDIO_INTENTS.find((item) => item.id === intent)?.label ?? 'Souvenir';
-  return `${intentLabel} ${audienceLabel}`;
-}
-
-function moodFromRgb(r: number, g: number, b: number): Mood {
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  const light = (max + min) / 2;
-  const saturation = max === min ? 0 : (max - min) / (255 - Math.abs(max + min - 255));
-  const warm = r * 1.08 + g * 0.55 - b * 0.72;
-  const cool = b * 0.95 + g * 0.55 - r * 0.7;
-
-  if (saturation < 0.16 && light < 110) return 'minimaliste';
-  if (b > r + 28 && cool > 120) return light < 120 ? 'nuit' : 'jardin';
-  if (r > 150 && b > 120 && Math.abs(r - b) < 70) return 'romantique';
-  if (r > 130 && b > 120 && b > g + 15) return 'mystique';
-  if (warm > 150) return 'solaire';
-  if (g > r && g > b - 10) return 'jardin';
-  return 'kawaii';
-}
-
-async function moodFromImageFile(file: File): Promise<Mood> {
-  const url = URL.createObjectURL(file);
-  try {
-    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = reject;
-      img.src = url;
-    });
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    if (!ctx) return 'jardin';
-    canvas.width = 32;
-    canvas.height = 32;
-    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-    const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-    let r = 0;
-    let g = 0;
-    let b = 0;
-    let count = 0;
-    for (let i = 0; i < pixels.length; i += 4) {
-      const alpha = pixels[i + 3] ?? 0;
-      if (alpha < 20) continue;
-      r += pixels[i] ?? 0;
-      g += pixels[i + 1] ?? 0;
-      b += pixels[i + 2] ?? 0;
-      count++;
-    }
-    if (count === 0) return 'jardin';
-    return moodFromRgb(r / count, g / count, b / count);
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
-
-function completionScore(
-  bead: (typeof BEADS)[number],
-  gapMm: number,
-  preferredFamily?: string,
-  previousRefId?: string,
-): number {
-  let score = Math.abs(gapMm - bead.sizeMm);
-  if (preferredFamily && bead.family === preferredFamily) score -= 4;
-  if (previousRefId === bead.id) score += 2;
-  if (gapMm > 18 && bead.sizeMm >= 8) score -= 1.5;
-  if (gapMm <= 10 && bead.sizeMm <= gapMm) score -= 1;
-  return score;
-}
+const FULFILLMENT_OPTIONS: Array<{
+  id: FulfillmentMode;
+  label: string;
+  detail: string;
+}> = [
+  {
+    id: 'assembled-paris',
+    label: 'Assemblé à Paris · recommandé',
+    detail: 'Assemblé à la main par notre atelier parisien.',
+  },
+  {
+    id: 'diy-kit',
+    label: 'Kit DIY',
+    detail: 'Les pièces préparées, à monter chez vous.',
+  },
+];
 
 export function Configurator() {
   const {
     step,
     setStep,
+    setAtelier,
     components,
     figurine,
     atelierId,
@@ -332,10 +183,8 @@ export function Configurator() {
     insertBeadAt,
     insertCharmAt,
     clearComponents,
-    replaceComponents,
     reset,
     save,
-    loadDesign,
     applyInspired,
   } = useConfigurator();
   const addCustom = useCart((s) => s.addCustom);
@@ -351,15 +200,21 @@ export function Configurator() {
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const [shareStatus, setShareStatus] = useState<string | null>(null);
   const [studioStatus, setStudioStatus] = useState<string | null>(null);
-  const [moodboardStatus, setMoodboardStatus] = useState<string | null>(null);
-  const [studioAudience, setStudioAudience] = useState<StudioAudience>('self');
-  const [studioIntent, setStudioIntent] = useState<StudioIntent>('memory');
   const [remixFilter, setRemixFilter] = useState<RemixFilter>('all');
+  const [sharePanelOpen, setSharePanelOpen] = useState(false);
+  const [inspirationOpen, setInspirationOpen] = useState(false);
+  const [timelineOpen, setTimelineOpen] = useState(false);
+  const [finalizeOpen, setFinalizeOpen] = useState(false);
+  const [fulfillmentMode, setFulfillmentMode] =
+    useState<FulfillmentMode>('assembled-paris');
+  const [portalReady, setPortalReady] = useState(false);
   const [unboxingOpen, setUnboxingOpen] = useState(false);
   const [customStepperOpen, setCustomStepperOpen] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const addToCartRef = useRef<HTMLDivElement>(null);
+  const timelineRef = useRef<HTMLDivElement>(null);
+  const mobilePaletteRef = useRef<HTMLDivElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const braceletRef = useRef<BraceletPreviewHandle>(null);
 
@@ -388,6 +243,10 @@ export function Configurator() {
   }, [atelierId]);
 
   useEffect(() => {
+    setPortalReady(true);
+  }, []);
+
+  useEffect(() => {
     if (draftTitle) setCreationTitle(draftTitle);
     if (draftIntention) setIntention(draftIntention);
   }, [draftTitle, draftIntention]);
@@ -406,20 +265,43 @@ export function Configurator() {
 
   const beadsCount = countBeads(components);
   const charmsCount = countCharms(components);
+  const totalPieces = components.length + (figurine ? 1 : 0);
   const targetMm = targetMmOf(atelierId, sizeCm);
   const lengthMm = totalLengthMm(components);
   const fit = getSizeFit(atelierId, sizeCm, components);
   const canOrder = fit.status === 'ready';
   const creationName = creationTitle.trim() || 'Ma création';
-  const fitTone = fit.status === 'ready' ? 'ready' : fit.status === 'too-long' ? 'danger' : 'quiet';
-  const fitMessage =
+  const orderStatusMessage =
     fit.status === 'empty'
       ? 'Ajoutez vos premières perles pour composer le bracelet'
       : fit.status === 'ready'
-        ? `Ajustement parfait · ${formatCmFromMm(lengthMm)}`
+        ? `Votre bracelet est prêt · ${formatCmFromMm(lengthMm)}`
         : fit.status === 'too-long'
-          ? `Trop long de ${formatCmFromMm(fit.overflowMm)} · retirez une perle`
-          : `Encore ${formatCmFromMm(fit.remainingMm)} pour une taille parfaite`;
+          ? `Retirez une pièce pour retrouver l’équilibre`
+          : `Encore ${formatCmFromMm(fit.remainingMm)} pour finaliser`;
+  const isKawaiiAtelier = atelier?.id === 'atelier_kawaii';
+  const creationSteps = [
+    {
+      label: 'Base',
+      done: components.length > 0,
+      active: components.length === 0,
+    },
+    {
+      label: 'Perles',
+      done: components.length > 0,
+      active: components.length > 0 && fit.status !== 'ready',
+    },
+    {
+      label: isKawaiiAtelier ? 'Figurine' : 'Détails',
+      done: isKawaiiAtelier ? Boolean(figurine) : charmsCount > 0,
+      active: isKawaiiAtelier ? components.length > 0 && !figurine : false,
+    },
+    {
+      label: 'Finaliser',
+      done: canOrder,
+      active: canOrder,
+    },
+  ];
   const filteredRemixes = useMemo(
     () =>
       remixFilter === 'all'
@@ -427,14 +309,6 @@ export function Configurator() {
         : WORLD_REMIXES.filter((remix) => remix.filter === remixFilter),
     [remixFilter],
   );
-  const coachInsight = analyzeBraceletDesign({
-    components,
-    figurine,
-    fit,
-    title: creationTitle,
-    intention,
-  });
-
   // Listen to global pointer events while dragging from palette
   useEffect(() => {
     if (!paletteDrag) return;
@@ -492,8 +366,19 @@ export function Configurator() {
       components,
       figurine,
       title: creationName,
-      intention: intention.trim() || undefined,
+      intention: getPackagedIntention(),
     };
+  }
+
+  function getPackagedIntention(): string | undefined {
+    return intention.trim() || undefined;
+  }
+
+  function getShareUrl(): string | null {
+    if (typeof window === 'undefined') return null;
+    const url = new URL(window.location.href);
+    url.searchParams.set('design', encodeBraceletDesign(getCurrentShareDesign()));
+    return url.toString();
   }
 
   function announceStudio(message: string) {
@@ -501,69 +386,36 @@ export function Configurator() {
     setTimeout(() => setStudioStatus(null), 2600);
   }
 
-  function handleGuidedCreation() {
-    const mood = moodForGuide(studioAudience, studioIntent);
-    const intent = STUDIO_INTENTS.find((item) => item.id === studioIntent);
-    applyInspired(mood);
-    atelierSound('stone');
-    haptic([8, 18, 8]);
-    setCreationTitle((current) => current.trim() || titleForGuide(studioAudience, studioIntent));
-    setIntention((current) => current.trim() || intent?.intention || '');
-    setStep('beads');
-    announceStudio(`Style ${moodLabel(mood)} généré`);
+  function revealMobilePalette() {
+    if (typeof window === 'undefined') return;
+    requestAnimationFrame(() => {
+      mobilePaletteRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   }
 
   function handleWorldRemix(remix: (typeof WORLD_REMIXES)[number]) {
     applyInspired(remix.mood);
     setCreationTitle(`Remix · ${remix.title}`);
     setIntention(remix.intention);
-    setStudioAudience(remix.audience);
     setStep('beads');
     atelierSound('stone');
     haptic([8, 18, 8]);
     announceStudio(`${remix.title} remixé`);
   }
 
-  function handleSavedRemix(id: string, title?: string, savedIntention?: string) {
-    loadDesign(id);
-    setCreationTitle(`Remix · ${title || 'Création'}`);
-    setIntention(savedIntention || intention);
-    setStep('beads');
-    haptic(8);
-    announceStudio('Création reprise');
-  }
-
-  async function handleMoodboardUpload(file?: File) {
-    if (!file) return;
-    setMoodboardStatus('Analyse...');
-    try {
-      const mood = await moodFromImageFile(file);
-      applyInspired(mood);
-      setCreationTitle((current) => current.trim() || `Moodboard · ${moodLabel(mood)}`);
-      setIntention((current) => current.trim() || `Palette inspirée de ${file.name}.`);
-      setMoodboardStatus(`Palette ${moodLabel(mood)}`);
-      setStep('beads');
-      atelierSound('stone');
-      haptic([8, 18, 8]);
-    } catch {
-      setMoodboardStatus('Image non lisible');
-    }
-    setTimeout(() => setMoodboardStatus(null), 2800);
-  }
-
   function handleSaveDesign() {
     if (components.length === 0) return;
     haptic(8);
     atelierSound('soft');
-    const design = save(creationName, intention.trim() || undefined);
-    setSaveStatus(`Sauvegardé · ${design.title ?? 'Ma création'}`);
+    const design = save(creationName, getPackagedIntention());
+    setSaveStatus(`Enregistré · ${design.title ?? 'Ma création'}`);
     setTimeout(() => setSaveStatus(null), 2400);
   }
 
   async function handleShareDesign() {
     if (components.length === 0 || typeof window === 'undefined') return;
-    const url = new URL(window.location.href);
-    url.searchParams.set('design', encodeBraceletDesign(getCurrentShareDesign()));
+    const url = getShareUrl();
+    if (!url) return;
     const shareText = `Regarde mon bracelet "${creationName}" créé chez My Nice Bracelet.`;
 
     try {
@@ -571,11 +423,11 @@ export function Configurator() {
         await navigator.share({
           title: creationName,
           text: shareText,
-          url: url.toString(),
+          url,
         });
         setShareStatus('Partage ouvert');
       } else {
-        await navigator.clipboard.writeText(`${shareText}\n${url.toString()}`);
+        await navigator.clipboard.writeText(`${shareText}\n${url}`);
         setShareStatus('Lien copié');
       }
       haptic([6, 18, 6]);
@@ -585,73 +437,18 @@ export function Configurator() {
     setTimeout(() => setShareStatus(null), 2400);
   }
 
-  function handleAutoCompleteBracelet() {
-    if (!atelier || fit.status !== 'too-short') return;
-
-    const familyCounts = new Map<string, number>();
-    for (const component of components) {
-      if (component.kind !== 'bead') continue;
-      const bead = BEAD_BY_ID[component.refId];
-      if (!bead) continue;
-      familyCounts.set(bead.family, (familyCounts.get(bead.family) ?? 0) + 1);
+  async function handleCopyShareLink() {
+    if (components.length === 0 || typeof window === 'undefined') return;
+    const url = getShareUrl();
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareStatus('Lien copié');
+      haptic([6, 18, 6]);
+    } catch {
+      setShareStatus('Copie impossible');
     }
-    const familyOrder = [...familyCounts.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .map(([family]) => family);
-    const allowedFamilies = atelier.allowedBeadFamilies;
-    const candidates = BEADS.filter(
-      (bead) => allowedFamilies.includes(bead.family) && bead.stock > 0 && bead.sizeMm > 0,
-    );
-    if (candidates.length === 0) return;
-
-    const next = [...components];
-    let total = lengthMm;
-    let guard = 0;
-
-    while (total < fit.minMm - 0.0001 && guard < 80) {
-      const capacity = fit.maxMm - total;
-      const gap = fit.minMm - total;
-      const preferredFamily = familyOrder[next.length % Math.max(1, familyOrder.length)];
-      const possible = candidates.filter((bead) => bead.sizeMm <= capacity + 0.0001);
-      if (possible.length === 0) break;
-
-      const bead = possible
-        .slice()
-        .sort((a, b) => {
-          const aScore = completionScore(a, gap, preferredFamily, next.at(-1)?.refId);
-          const bScore = completionScore(b, gap, preferredFamily, next.at(-1)?.refId);
-          return aScore - bScore;
-        })[0];
-      if (!bead) break;
-
-      next.push({ slotId: uid('s'), kind: 'bead', refId: bead.id });
-      total += bead.sizeMm;
-      guard++;
-    }
-
-    if (next.length === components.length) return;
-    replaceComponents(next);
-    atelierSound('stone');
-    haptic([7, 16, 7]);
-    announceStudio('Longueur complétée');
-  }
-
-  function handleCoachAction(action: CoachAction) {
-    if (action === 'generate') {
-      handleGuidedCreation();
-      return;
-    }
-    if (action === 'complete') {
-      handleAutoCompleteBracelet();
-      return;
-    }
-    if (action === 'name') {
-      titleInputRef.current?.focus();
-      return;
-    }
-    if (action === 'share') {
-      void handleShareDesign();
-    }
+    setTimeout(() => setShareStatus(null), 2400);
   }
 
   function handleAddToCart() {
@@ -659,7 +456,8 @@ export function Configurator() {
     const design = snapshotConfig(
       useConfigurator.getState(),
       creationName,
-      intention.trim() || undefined,
+      getPackagedIntention(),
+      fulfillmentMode,
     );
     addCustom(design, 1);
     const rect = addToCartRef.current?.getBoundingClientRect();
@@ -671,135 +469,458 @@ export function Configurator() {
       : undefined;
     successMoment(origin);
     setJustAddedCart(true);
+    setFinalizeOpen(false);
     setUnboxingOpen(true);
     setTimeout(() => setJustAddedCart(false), 2000);
   }
 
-  return (
-    <div>
-      <div className="container mx-auto px-4 md:px-6 pt-6 pb-10">
-        {/* Top bar : back to atelier + atelier name */}
-        <div className="flex items-center justify-between gap-3 flex-wrap mb-5">
-          <button
-            type="button"
-            onClick={() => {
-              haptic(6);
-              setStep('atelier');
-              if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#718096] hover:text-[#2D3748] transition-colors"
+  function renderPaletteContent() {
+    return (
+      <>
+        <div className="top-0 z-10 bg-white px-5 pb-4 pt-5 md:px-7 md:pt-7 lg:sticky border-b border-[#EEE9E0]">
+          <div className="mb-4">
+            <p className="mb-2 text-[9px] font-black uppercase tracking-widest text-[#A8BED4]">
+              Univers
+            </p>
+            <div className="flex gap-1.5 overflow-x-auto pb-1">
+              {ATELIERS.map((item) => {
+                const active = item.id === atelierId;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      if (active) return;
+                      haptic(8);
+                      setAtelier(item.id);
+                      setStep('beads');
+                      setTimelineOpen(false);
+                    }}
+                    className={cn(
+                      'shrink-0 rounded-full border px-3 py-1.5 text-[9px] font-black uppercase tracking-widest transition-colors',
+                      active
+                        ? 'border-[#2D3748] bg-[#2D3748] text-white'
+                        : 'border-[#EEE9E0] bg-[#F8F4ED] text-[#718096] hover:border-[#3D5A73] hover:text-[#2D3748]',
+                    )}
+                  >
+                    {item.id === 'atelier_bracelet_bar'
+                      ? 'Essentiel'
+                      : item.id === 'atelier_kawaii'
+                        ? 'Kawaii'
+                        : 'Classique'}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div
+            className={cn(
+              'grid gap-2',
+              atelier?.allowCharms ? 'grid-cols-2' : 'grid-cols-1',
+            )}
           >
-            <ArrowLeft size={14} strokeWidth={2} />
-            Changer d&rsquo;atelier
-          </button>
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#A8BED4]">
-            {atelier?.name} · {atelier?.wireType}
+            {TABS.filter((t) => t.id !== 'charms' || atelier?.allowCharms).map((t) => {
+              const active = tab === t.id;
+              const label =
+                t.id === 'charms' && atelier?.id === 'atelier_kawaii' ? 'Figurines' : t.label;
+              const badge =
+                t.id === 'beads'
+                  ? `${(lengthMm / 10).toFixed(1).replace('.', ',')}/${(targetMm / 10).toFixed(0)} cm`
+                  : `${charmsCount}/${atelier?.maxCharms ?? 0}`;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => {
+                    haptic(6);
+                    setStep(t.id);
+                  }}
+                  className={cn(
+                    'flex items-center justify-between gap-2 rounded-xl border p-3 transition-all',
+                    active
+                      ? 'bg-[#2D3748] border-[#2D3748] text-white shadow-md'
+                      : 'bg-white border-[#EEE9E0] text-[#718096] hover:border-[#A8BED4]',
+                  )}
+                >
+                  <span className="text-[10px] md:text-[11px] font-black uppercase tracking-widest">
+                    {label}
+                  </span>
+                  <span
+                    className={cn(
+                      'inline-flex h-6 items-center justify-center rounded-full px-2.5 text-[9px] font-black tabular-nums whitespace-nowrap',
+                      active ? 'bg-white/15 text-white' : 'bg-[#F5F0E8] text-[#3D5A73]',
+                    )}
+                  >
+                    {badge}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="px-5 py-5 md:px-7 md:py-6">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={tab}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
+            >
+              {tab === 'beads' && (
+                <BeadPicker onTilePointerDown={(refId, e) => startPaletteDrag('bead', refId, e)} />
+              )}
+              {tab === 'charms' && (
+                <CharmPicker
+                  onTilePointerDown={(refId, e) => startPaletteDrag('charm', refId, e)}
+                />
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </>
+    );
+  }
+
+  function renderInspirationGallery() {
+    return (
+      <div className="rounded-2xl border border-[#EEE9E0] bg-white p-4 shadow-sm md:p-5">
+        <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <div className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#3D5A73]">
+              <Sparkles size={14} strokeWidth={2.1} />
+              Galerie inspiration
+            </div>
+            <p className="mt-1 text-[12px] font-semibold italic text-[#718096]">
+              Choisissez une base déjà harmonieuse, puis changez ce qui vous ressemble.
+            </p>
+          </div>
+          <div className="flex gap-1.5 overflow-x-auto pb-1 md:pb-0">
+            {REMIX_FILTERS.map((filter) => (
+              <button
+                key={filter.id}
+                type="button"
+                onClick={() => {
+                  haptic(4);
+                  setRemixFilter(filter.id);
+                }}
+                className={cn(
+                  'shrink-0 rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition-colors',
+                  remixFilter === filter.id
+                    ? 'bg-[#2D3748] text-white'
+                    : 'border border-[#EEE9E0] bg-white text-[#718096] hover:border-[#3D5A73] hover:text-[#2D3748]',
+                )}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {filteredRemixes.map((remix) => (
+            <article
+              key={remix.id}
+              className="overflow-hidden rounded-xl border border-[#EEE9E0] bg-[#FBF8F2] text-left transition-all hover:-translate-y-0.5 hover:border-[#3D5A73] hover:bg-white hover:shadow-md"
+            >
+              <div
+                className="relative h-20 overflow-hidden"
+                style={{
+                  background: `linear-gradient(135deg, ${remix.colors.join(', ')})`,
+                }}
+              >
+                <div className="absolute inset-x-6 top-1/2 h-9 -translate-y-1/2 rounded-full border-[4px] border-white/75 shadow-[0_14px_32px_rgba(45,55,72,0.2)]" />
+                <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 gap-1">
+                  {remix.colors.concat(remix.colors).slice(0, 7).map((hex, index) => (
+                    <span
+                      key={`${remix.id}-preview-${hex}-${index}`}
+                      className="h-5 w-5 rounded-full border-2 border-white shadow-sm"
+                      style={{ backgroundColor: hex }}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="p-3.5">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <p className="font-serif text-[16px] font-black uppercase leading-none tracking-tight text-[#2D3748]">
+                    {remix.title}
+                  </p>
+                  <span className="rounded-full bg-white px-2 py-1 text-[8px] font-black uppercase tracking-widest text-[#3D5A73] shadow-sm">
+                    {moodLabel(remix.mood)}
+                  </span>
+                </div>
+                <p className="line-clamp-2 min-h-[32px] text-[12px] font-semibold italic leading-relaxed text-[#718096]">
+                  {remix.story}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleWorldRemix(remix);
+                    setInspirationOpen(false);
+                  }}
+                  className="mt-3 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-[#2D3748] px-3 text-[9px] font-black uppercase tracking-widest text-white transition-colors hover:bg-[#3D5A73]"
+                >
+                  <Wand2 size={11} strokeWidth={2.2} />
+                  Personnaliser ce modèle
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  function renderFinalDetails({ inSheet = false }: { inSheet?: boolean } = {}) {
+    return (
+      <div
+        className={cn(
+          'grid gap-4 border border-[#EEE9E0] bg-[#F5F0E8] p-4 md:p-5',
+          inSheet ? 'rounded-2xl' : 'rounded-[1.5rem]',
+        )}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="mb-1 text-[9px] font-black uppercase tracking-widest text-[#A8BED4]">
+              Finaliser
+            </p>
+            <p className="font-serif text-[16px] font-black uppercase tracking-tight text-[#2D3748]">
+              {orderStatusMessage}
+            </p>
+          </div>
+          <p className="shrink-0 font-serif text-[26px] font-black tracking-tighter text-[#2D3748] tabular-nums">
+            {formatPrice(price)}
           </p>
         </div>
 
-        <section className="mb-5 grid xl:grid-cols-[1.25fr_0.75fr] gap-3">
-          <div className="rounded-2xl border border-[#EEE9E0] bg-white p-3 md:p-4 shadow-sm">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#3D5A73]">
-                <Wand2 size={14} strokeWidth={2.2} />
-                Studio guidé
-              </div>
+        {atelier?.id !== 'atelier_kawaii' && (
+          <div>
+            <p className="mb-2 text-[9px] font-black uppercase tracking-widest text-[#A8BED4]">
+              Taille
+            </p>
+            <div className="grid grid-cols-4 gap-1.5">
+              {atelier?.sizes.map((sz) => {
+                const active = sizeLabel === sz.label;
+                return (
+                  <button
+                    key={sz.label}
+                    type="button"
+                    onClick={() => {
+                      haptic(4);
+                      setSize(sz.label);
+                      setCustomStepperOpen(false);
+                    }}
+                    className={cn(
+                      'rounded-lg border px-2 py-2 text-center transition-colors',
+                      active
+                        ? 'border-[#3D5A73] bg-[#3D5A73] text-white'
+                        : 'border-[#EEE9E0] bg-white text-[#718096] hover:border-[#3D5A73] hover:text-[#2D3748]',
+                    )}
+                  >
+                    <span className="block font-serif text-[14px] font-black uppercase leading-none">
+                      {sz.label}
+                    </span>
+                    <span className="mt-1 block text-[8px] font-black uppercase tracking-widest tabular-nums opacity-75">
+                      {sz.cm} cm
+                    </span>
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => {
+                  haptic(4);
+                  setSize('custom');
+                  setCustomStepperOpen(true);
+                }}
+                className={cn(
+                  'rounded-lg border px-2 py-2 text-center transition-colors',
+                  sizeLabel === 'custom'
+                    ? 'border-[#3D5A73] bg-[#3D5A73] text-white'
+                    : 'border-[#EEE9E0] bg-white text-[#718096] hover:border-[#3D5A73] hover:text-[#2D3748]',
+                )}
+              >
+                <span className="block text-[10px] font-black uppercase tracking-tight">
+                  Perso.
+                </span>
+                <span className="mt-1 block text-[8px] font-black uppercase tracking-widest tabular-nums opacity-75">
+                  {sizeCm.toString().replace('.', ',')} cm
+                </span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div>
+          <p className="mb-2 text-[9px] font-black uppercase tracking-widest text-[#A8BED4]">
+            Assemblage
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {FULFILLMENT_OPTIONS.map((option) => {
+              const active = fulfillmentMode === option.id;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => {
+                    haptic(4);
+                    setFulfillmentMode(option.id);
+                  }}
+                  className={cn(
+                    'rounded-xl border p-3 text-left transition-colors',
+                    active
+                      ? 'border-[#3D5A73] bg-white text-[#2D3748] shadow-sm'
+                      : 'border-[#EEE9E0] bg-white/65 text-[#718096] hover:border-[#A8BED4] hover:text-[#2D3748]',
+                  )}
+                >
+                  <span className="block text-[10px] font-black uppercase tracking-widest">
+                    {option.label}
+                  </span>
+                  <span className="mt-1 block text-[12px] font-semibold italic leading-relaxed">
+                    {option.detail}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div ref={inSheet ? undefined : addToCartRef}>
+          <button
+            type="button"
+            onClick={handleAddToCart}
+            disabled={!canOrder}
+            className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-xl bg-[#3D5A73] px-6 text-[11px] font-black uppercase tracking-widest text-white shadow-xl transition-all hover:bg-[#2A3F50] active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {justAddedCart ? (
+              <>
+                <Check size={16} strokeWidth={2.5} />
+                Ajouté
+              </>
+            ) : (
+              <>
+                <ShoppingBag size={16} strokeWidth={2} />
+                Ajouter au panier · {formatPrice(price)}
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const mobileActionBar = (
+    <div
+      className="fixed inset-x-3 z-[1800] grid grid-cols-[1fr_auto_auto] items-center gap-2 rounded-2xl border border-[#EEE9E0] bg-white/95 p-2.5 shadow-[0_18px_50px_rgba(45,55,72,0.22)] backdrop-blur-md lg:hidden"
+      style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)' }}
+    >
+      <div className="min-w-0 px-1">
+        <p className="truncate text-[9px] font-black uppercase tracking-widest text-[#A8BED4]">
+          {canOrder ? 'Prêt à commander' : 'Création en cours'}
+        </p>
+        <p className="font-serif text-[22px] font-black leading-none tracking-tighter text-[#2D3748] tabular-nums">
+          {formatPrice(price)}
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={handleCopyShareLink}
+        disabled={components.length === 0}
+        className="inline-flex h-11 items-center justify-center gap-1.5 rounded-xl border border-[#EEE9E0] bg-white px-3 text-[9px] font-black uppercase tracking-widest text-[#3D5A73] disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        <Copy size={13} strokeWidth={2.2} />
+        Lien
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          haptic(6);
+          if (canOrder) setFinalizeOpen(true);
+          else revealMobilePalette();
+        }}
+        className="inline-flex h-11 items-center justify-center gap-1.5 rounded-xl bg-[#2D3748] px-4 text-[9px] font-black uppercase tracking-widest text-white"
+      >
+        {canOrder ? <ShoppingBag size={13} strokeWidth={2.2} /> : <Plus size={13} strokeWidth={2.2} />}
+        {canOrder ? 'Panier' : 'Ajouter'}
+      </button>
+    </div>
+  );
+
+  return (
+    <div>
+      <div className="container mx-auto px-4 md:px-6 pt-6 pb-28 lg:pb-10">
+        <div className="mb-4 hidden flex-wrap items-center justify-between gap-3 lg:flex">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-[#A8BED4]">
+              My Nice Bracelet
+            </p>
+            <h1 className="font-serif text-[26px] font-black uppercase leading-none tracking-tight text-[#2D3748] md:text-[34px]">
+              Le Studio
+            </h1>
+          </div>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#EEE9E0] bg-white px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-[#3D5A73] shadow-sm">
+              <PackageCheck size={12} strokeWidth={2.2} />
+              Assemblé à Paris par nos soins
+            </span>
+            <span className="inline-flex rounded-full bg-[#2D3748] px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-white shadow-sm">
+              {formatPrice(price)}
+            </span>
+          </div>
+        </div>
+
+        <section className="mb-4 hidden rounded-2xl border border-[#EEE9E0] bg-white p-3 shadow-sm md:p-4 lg:block">
+          <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
+            <div className="grid grid-cols-4 gap-1.5">
+              {creationSteps.map((item, index) => (
+                <div
+                  key={item.label}
+                  className={cn(
+                    'rounded-lg border px-2 py-2 text-center transition-colors',
+                    item.active
+                      ? 'border-[#3D5A73] bg-[#F4F8FB] text-[#2D3748]'
+                      : item.done
+                        ? 'border-[#BFD9C7] bg-[#EDF7F0] text-[#244A35]'
+                        : 'border-[#EEE9E0] bg-[#FBF8F2] text-[#A8BED4]',
+                  )}
+                >
+                  <span className="block text-[8px] font-black uppercase tracking-widest">
+                    {index + 1}
+                  </span>
+                  <span className="mt-0.5 block truncate text-[9px] font-black uppercase tracking-widest">
+                    {item.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center gap-2 lg:justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  haptic(4);
+                  setInspirationOpen(true);
+                }}
+                className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-lg border border-[#EEE9E0] bg-white px-4 text-[10px] font-black uppercase tracking-widest text-[#3D5A73] transition-colors hover:border-[#3D5A73] sm:flex-none"
+              >
+                <Sparkles size={13} strokeWidth={2.2} />
+                Inspirations
+              </button>
               {studioStatus && (
-                <span className="rounded-full bg-[#EDF7F0] px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-[#244A35]">
+                <span className="hidden min-w-0 truncate rounded-full bg-[#EDF7F0] px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-[#244A35] md:inline-flex">
                   {studioStatus}
                 </span>
               )}
             </div>
-            <div className="mt-3 grid gap-3 lg:grid-cols-[1fr_1fr_auto]">
-              <div className="grid grid-cols-4 gap-1.5">
-                {STUDIO_AUDIENCES.map((item) => {
-                  const Icon = item.icon;
-                  const active = studioAudience === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => {
-                        haptic(4);
-                        setStudioAudience(item.id);
-                      }}
-                      className={cn(
-                        'inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border px-2 text-[9px] font-black uppercase tracking-widest transition-colors',
-                        active
-                          ? 'border-[#3D5A73] bg-[#3D5A73] text-white'
-                          : 'border-[#EEE9E0] bg-[#F8F4ED] text-[#718096] hover:border-[#A8BED4] hover:text-[#2D3748]',
-                      )}
-                    >
-                      <Icon size={12} strokeWidth={2.2} />
-                      {item.label}
-                    </button>
-                  );
-                })}
-              </div>
-              <div className="grid grid-cols-4 gap-1.5">
-                {STUDIO_INTENTS.map((item) => {
-                  const active = studioIntent === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => {
-                        haptic(4);
-                        setStudioIntent(item.id);
-                      }}
-                      className={cn(
-                        'h-10 rounded-lg border px-2 text-[9px] font-black uppercase tracking-widest transition-colors',
-                        active
-                          ? 'border-[#A4473E] bg-[#FFF1EE] text-[#7A2D25]'
-                          : 'border-[#EEE9E0] bg-[#F8F4ED] text-[#718096] hover:border-[#D4A8A0] hover:text-[#2D3748]',
-                      )}
-                    >
-                      {item.label}
-                    </button>
-                  );
-                })}
-              </div>
-              <button
-                type="button"
-                onClick={handleGuidedCreation}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#2D3748] px-4 text-[10px] font-black uppercase tracking-widest text-white shadow-sm transition-colors hover:bg-[#3D5A73]"
-              >
-                <Sparkles size={13} strokeWidth={2.2} />
-                Créer
-              </button>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-[#D9E4D7] bg-[#F4FAF4] p-3 md:p-4 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#244A35]">
-                <Camera size={14} strokeWidth={2.2} />
-                Moodboard
-              </div>
-              {moodboardStatus && (
-                <span className="rounded-full bg-white/85 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-[#244A35]">
-                  {moodboardStatus}
-                </span>
-              )}
-            </div>
-            <label className="mt-3 inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-[#BFD9C7] bg-white px-4 text-[10px] font-black uppercase tracking-widest text-[#244A35] transition-colors hover:border-[#244A35]">
-              <Camera size={13} strokeWidth={2.2} />
-              Image vers bracelet
-              <input
-                type="file"
-                accept="image/*"
-                className="sr-only"
-                onChange={(event) => {
-                  void handleMoodboardUpload(event.target.files?.[0]);
-                  event.currentTarget.value = '';
-                }}
-              />
-            </label>
           </div>
         </section>
 
         {/* ─── MAIN CARD : warm canvas containing the bracelet AND a floating palette ─── */}
-        <div className="relative rounded-[2rem] md:rounded-[3rem] overflow-hidden border border-[#EEE9E0] shadow-md">
+        <div
+          className={cn(
+            'overflow-hidden rounded-[1.5rem] border border-[#EEE9E0] shadow-md lg:relative lg:top-auto lg:z-auto lg:rounded-[3rem]',
+            timelineOpen ? 'relative z-0' : 'sticky top-20 z-20 md:top-24',
+          )}
+        >
           {/* Warm gradient covers the WHOLE card */}
           <div
             aria-hidden
@@ -818,14 +939,14 @@ export function Configurator() {
             }}
           />
 
-          <div className="relative grid lg:grid-cols-[1fr_400px] gap-4 md:gap-6 p-4 md:p-6">
+          <div className="relative grid gap-3 p-3 md:gap-6 md:p-6 lg:grid-cols-[1fr_400px]">
             {/* LEFT — bracelet directly on the warm canvas (no inner card).
                 Vertically centered. Canvas height kept tight so the action
                 buttons stay close to the bracelet. Heavy zoom uses pan to
                 navigate beyond the visible bounds. */}
             <div
               className={cn(
-                'relative min-h-[460px] md:min-h-[560px] flex items-center justify-center px-3 md:px-4 pb-2 md:pb-3',
+                'relative flex h-[44dvh] min-h-[320px] max-h-[430px] items-center justify-center px-3 pb-2 md:h-[50dvh] md:min-h-[460px] md:px-4 md:pb-3 lg:h-auto lg:max-h-none lg:min-h-[560px]',
                 // Just enough top padding to clear the size selector pill
                 // (non-Kawaii). Kawaii has no selector, so minimal padding.
                 atelier?.id === 'atelier_kawaii' ? 'pt-2 md:pt-3' : 'pt-14 md:pt-16',
@@ -962,7 +1083,7 @@ export function Configurator() {
                   zoom={zoom}
                   pan={pan}
                   onPanChange={setPan}
-                  emptyText="Glissez une perle pour commencer"
+                  emptyText="Touchez une perle pour commencer"
                 />
               </div>
 
@@ -995,7 +1116,7 @@ export function Configurator() {
               </AnimatePresence>
 
               {/* Zoom controls — floating bottom-right of bracelet stage */}
-              <div className="absolute bottom-2 md:bottom-3 right-2 md:right-3 z-10 inline-flex items-center gap-1 bg-white/85 backdrop-blur-md rounded-full p-1 shadow-sm border border-[#EEE9E0]">
+              <div className="absolute bottom-2 right-2 z-10 hidden items-center gap-1 rounded-full border border-[#EEE9E0] bg-white/85 p-1 shadow-sm backdrop-blur-md md:bottom-3 md:right-3 lg:inline-flex">
                 <button
                   type="button"
                   onClick={() => {
@@ -1036,125 +1157,108 @@ export function Configurator() {
               {/* Inspire-moi + Recommencer floating bottom of bracelet stage */}
               <div className="absolute bottom-2 md:bottom-3 left-2 md:left-3 z-10 flex flex-wrap items-center gap-2">
                 <InspireButton />
+                {totalPieces === 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      haptic(4);
+                      setInspirationOpen(true);
+                    }}
+                    className="inline-flex h-10 items-center gap-2 rounded-full border border-[#EEE9E0] bg-white/85 px-4 text-[10px] font-black uppercase tracking-widest text-[#3D5A73] shadow-sm transition-colors hover:border-[#3D5A73] lg:hidden"
+                  >
+                    <Sparkles size={13} strokeWidth={2.2} />
+                    Inspirations
+                  </button>
+                )}
+                {totalPieces > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      haptic(4);
+                      const nextTimelineOpen = !timelineOpen;
+                      setTimelineOpen(nextTimelineOpen);
+                      if (nextTimelineOpen) {
+                        requestAnimationFrame(() => {
+                          timelineRef.current?.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start',
+                          });
+                        });
+                      }
+                    }}
+                    className={cn(
+                      'inline-flex h-10 items-center gap-2 rounded-full border px-4 text-[10px] font-black uppercase tracking-widest shadow-sm transition-colors',
+                      timelineOpen
+                        ? 'border-[#3D5A73] bg-[#3D5A73] text-white'
+                        : 'border-[#EEE9E0] bg-white/85 text-[#3D5A73] hover:border-[#3D5A73]',
+                    )}
+                  >
+                    Réorganiser
+                  </button>
+                )}
+                {totalPieces > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      haptic(10);
+                      if (beadsCount + charmsCount === 0) reset();
+                      else clearComponents();
+                    }}
+                    className="inline-flex items-center gap-2 h-10 px-4 rounded-full bg-white/85 backdrop-blur-md border border-[#EEE9E0] text-[10px] font-black uppercase tracking-widest text-[#718096] hover:text-[#2D3748] hover:border-[#3D5A73] transition-colors shadow-sm"
+                  >
+                    <RotateCcw size={13} strokeWidth={2} />
+                    Recommencer
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => {
-                    haptic(10);
-                    if (beadsCount + charmsCount === 0) reset();
-                    else clearComponents();
+                    haptic(6);
+                    revealMobilePalette();
                   }}
-                  className="inline-flex items-center gap-2 h-10 px-4 rounded-full bg-white/85 backdrop-blur-md border border-[#EEE9E0] text-[10px] font-black uppercase tracking-widest text-[#718096] hover:text-[#2D3748] hover:border-[#3D5A73] transition-colors shadow-sm"
+                  className="inline-flex h-10 items-center gap-2 rounded-full bg-[#2D3748] px-4 text-[10px] font-black uppercase tracking-widest text-white shadow-sm transition-colors hover:bg-[#3D5A73] lg:hidden"
                 >
-                  <RotateCcw size={13} strokeWidth={2} />
-                  Recommencer
+                  <Plus size={13} strokeWidth={2.2} />
+                  Perles
                 </button>
               </div>
             </div>
 
             {/* RIGHT — white palette card floating on the warm canvas */}
-            <div className="relative rounded-[1.5rem] md:rounded-[2rem] overflow-hidden bg-white border border-[#EEE9E0] shadow-md flex flex-col lg:max-h-[600px]">
-              <div className="overflow-y-auto scrollbar-thin">
-                {/* Tab nav — sticky edge-to-edge with its own padding.
-                    Hide the Charms / Figurines tab when the atelier doesn't
-                    allow them (Bracelet Bar). */}
-                <div className="sticky top-0 z-10 bg-white px-5 md:px-7 pt-5 md:pt-7 pb-4 border-b border-[#EEE9E0]">
-                  <div
-                    className={cn(
-                      'grid gap-2',
-                      atelier?.allowCharms ? 'grid-cols-2' : 'grid-cols-1',
-                    )}
-                  >
-                    {TABS.filter((t) => t.id !== 'charms' || atelier?.allowCharms).map((t) => {
-                      const active = tab === t.id;
-                      // Kawaii uses figurines (Sanrio / Disney) instead of generic charms.
-                      const label =
-                        t.id === 'charms' && atelier?.id === 'atelier_kawaii'
-                          ? 'Figurines'
-                          : t.label;
-                      // Beads tab : compact "X,X / YY cm" (no decimals on the
-                      // target since presets are integer cm values).
-                      // Charms tab : count / max.
-                      const badge =
-                        t.id === 'beads'
-                          ? `${(lengthMm / 10).toFixed(1).replace('.', ',')}/${(targetMm / 10).toFixed(0)} cm`
-                          : `${charmsCount}/${atelier?.maxCharms ?? 0}`;
-                      return (
-                        <button
-                          key={t.id}
-                          type="button"
-                          onClick={() => {
-                            haptic(6);
-                            setStep(t.id);
-                          }}
-                          className={cn(
-                            'flex items-center justify-between gap-2 p-3 rounded-xl border transition-all',
-                            active
-                              ? 'bg-[#2D3748] border-[#2D3748] text-white shadow-md'
-                              : 'bg-white border-[#EEE9E0] text-[#718096] hover:border-[#A8BED4]',
-                          )}
-                        >
-                          <span className="text-[10px] md:text-[11px] font-black uppercase tracking-widest">
-                            {label}
-                          </span>
-                          <span
-                            className={cn(
-                              'inline-flex items-center justify-center h-6 px-2.5 rounded-full text-[9px] font-black tabular-nums whitespace-nowrap',
-                              active ? 'bg-white/15 text-white' : 'bg-[#F5F0E8] text-[#3D5A73]',
-                            )}
-                          >
-                            {badge}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Picker content with own padding */}
-                <div className="px-5 md:px-7 py-5 md:py-6">
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key={tab}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -4 }}
-                      transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
-                    >
-                      {tab === 'beads' && (
-                        <BeadPicker
-                          onTilePointerDown={(refId, e) => startPaletteDrag('bead', refId, e)}
-                        />
-                      )}
-                      {tab === 'charms' && (
-                        <CharmPicker
-                          onTilePointerDown={(refId, e) => startPaletteDrag('charm', refId, e)}
-                        />
-                      )}
-                    </motion.div>
-                  </AnimatePresence>
-                </div>
-              </div>
+            <div className="relative hidden overflow-hidden rounded-[2rem] border border-[#EEE9E0] bg-white shadow-md lg:flex lg:max-h-[600px] lg:flex-col">
+              <div className="overflow-y-auto scrollbar-thin">{renderPaletteContent()}</div>
             </div>
           </div>
         </div>
 
-        <CompositionTray
-          components={components}
-          figurine={figurine}
-          selectedSlotId={selectedComponent}
-          onSelect={select}
-          onMove={(from, to) => {
-            haptic(4);
-            moveComponent(from, to);
-          }}
-          onRemove={(slotId) => {
-            haptic(8);
-            removeComponent(slotId);
-          }}
-        />
+        {timelineOpen && totalPieces > 0 && (
+          <div ref={timelineRef} className="scroll-mt-24">
+            <CompositionTray
+              components={components}
+              figurine={figurine}
+              selectedSlotId={selectedComponent}
+              onSelect={select}
+              onMove={(from, to) => {
+                haptic(4);
+                moveComponent(from, to);
+              }}
+              onRemove={(slotId) => {
+                haptic(8);
+                removeComponent(slotId);
+              }}
+            />
+          </div>
+        )}
 
-        {/* ─── CREATION RITUAL ─── */}
-        <div className="mt-6 grid lg:grid-cols-[1.1fr_0.9fr] gap-3">
+        <div
+          id="mobile-palette"
+          ref={mobilePaletteRef}
+          className="mt-3 scroll-mt-[calc(44dvh+5.5rem)] overflow-hidden rounded-2xl border border-[#EEE9E0] bg-white shadow-sm lg:hidden"
+        >
+          {renderPaletteContent()}
+        </div>
+
+        <div className="mt-5">
           <div className="bg-white border border-[#EEE9E0] rounded-xl p-4 md:p-5 shadow-sm">
             <div className="flex items-center justify-between gap-3 mb-3">
               <div className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#3D5A73]">
@@ -1185,11 +1289,11 @@ export function Configurator() {
                 className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-[#EEE9E0] bg-white px-4 text-[10px] font-black uppercase tracking-widest text-[#3D5A73] transition-colors hover:border-[#3D5A73] hover:text-[#2D3748] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <Save size={13} strokeWidth={2.2} />
-                Sauver
+                Enregistrer
               </button>
               <button
                 type="button"
-                onClick={handleShareDesign}
+                onClick={() => setSharePanelOpen(true)}
                 disabled={components.length === 0}
                 className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#2D3748] px-4 text-[10px] font-black uppercase tracking-widest text-white transition-colors hover:bg-[#3D5A73] disabled:cursor-not-allowed disabled:opacity-40"
               >
@@ -1198,7 +1302,7 @@ export function Configurator() {
                 ) : (
                   <Share2 size={13} strokeWidth={2.2} />
                 )}
-                Partager
+                Partager mon bracelet
               </button>
             </div>
             <div className="mt-2 grid gap-2 sm:grid-cols-[auto_1fr] sm:items-center">
@@ -1223,236 +1327,12 @@ export function Configurator() {
               </p>
             )}
           </div>
-
-          <div
-            className={cn(
-              'border rounded-xl p-4 md:p-5 shadow-sm',
-              fitTone === 'ready' && 'bg-[#EDF7F0] border-[#BFD9C7] text-[#244A35]',
-              fitTone === 'danger' && 'bg-[#FFF1EE] border-[#E5B8AE] text-[#7A2D25]',
-              fitTone === 'quiet' && 'bg-white border-[#EEE9E0] text-[#2D3748]',
-            )}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest opacity-70">
-                  Ajustement
-                </p>
-                <p className="mt-1 font-serif text-[18px] md:text-[21px] font-black uppercase tracking-tight leading-tight">
-                  {fitMessage}
-                </p>
-              </div>
-              <span className="shrink-0 rounded-full bg-white/75 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest tabular-nums">
-                {formatCmFromMm(lengthMm)} / {formatCmFromMm(targetMm)}
-              </span>
-            </div>
-          </div>
         </div>
 
-        {/* ─── ATELIER COACH ─── */}
-        <div className="mt-4">
-          <CreationCoach insight={coachInsight} onAction={handleCoachAction} />
-        </div>
-
-        {/* ─── SHARE PREVIEW ─── */}
-        <div className="mt-4">
-          <SharePreview
-            components={components}
-            figurine={figurine}
-            title={creationName}
-            intention={intention.trim() || undefined}
-            lengthMm={lengthMm}
-            targetMm={targetMm}
-            price={price}
-          />
-        </div>
-
-        {/* ─── DUO SPLIT ─── */}
-        <div className="mt-4">
-          <DuoSplitPreview
-            components={components}
-            figurine={figurine}
-            title={creationName}
-            price={price}
-            onShare={() => {
-              void handleShareDesign();
-            }}
-          />
-        </div>
-
-        {/* ─── SOCIAL REMIX ─── */}
-        <div className="mt-4 grid xl:grid-cols-[1fr_0.8fr] gap-3">
-          <div className="rounded-2xl border border-[#EEE9E0] bg-white p-4 md:p-5 shadow-sm">
-            <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-              <div>
-                <div className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#3D5A73]">
-                  <Globe2 size={14} strokeWidth={2.1} />
-                  Galerie remix
-                </div>
-                <p className="mt-1 text-[12px] font-semibold italic text-[#718096]">
-                  Des recettes mondiales à reprendre, personnaliser et partager.
-                </p>
-              </div>
-              <span className="w-fit rounded-full bg-[#F5F0E8] px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-[#718096]">
-                Paris · Global · {WORLD_REMIXES.length} drops
-              </span>
-            </div>
-            <div className="mb-4 flex gap-1.5 overflow-x-auto pb-1">
-              {REMIX_FILTERS.map((filter) => (
-                <button
-                  key={filter.id}
-                  type="button"
-                  onClick={() => {
-                    haptic(4);
-                    setRemixFilter(filter.id);
-                  }}
-                  className={cn(
-                    'shrink-0 rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition-colors',
-                    remixFilter === filter.id
-                      ? 'bg-[#2D3748] text-white'
-                      : 'border border-[#EEE9E0] bg-white text-[#718096] hover:border-[#3D5A73] hover:text-[#2D3748]',
-                  )}
-                >
-                  {filter.label}
-                </button>
-              ))}
-            </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              {filteredRemixes.map((remix) => (
-                <button
-                  key={remix.id}
-                  type="button"
-                  onClick={() => handleWorldRemix(remix)}
-                  className="group overflow-hidden rounded-xl border border-[#EEE9E0] bg-[#FBF8F2] text-left transition-all hover:-translate-y-0.5 hover:border-[#3D5A73] hover:bg-white hover:shadow-md"
-                >
-                  <div
-                    className="h-2"
-                    style={{
-                      background: `linear-gradient(90deg, ${remix.colors.join(', ')})`,
-                    }}
-                  />
-                  <div className="p-3.5">
-                    <div className="mb-3 flex items-start justify-between gap-3">
-                      <div className="flex -space-x-1.5">
-                        {remix.colors.map((hex, index) => (
-                          <span
-                            key={`${remix.id}-${hex}-${index}`}
-                            className="h-8 w-8 rounded-full border-2 border-white shadow-sm"
-                            style={{ backgroundColor: hex }}
-                          />
-                        ))}
-                      </div>
-                      <span className="rounded-full bg-white px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-[#3D5A73] shadow-sm">
-                        {moodLabel(remix.mood)}
-                      </span>
-                    </div>
-                    <p className="font-serif text-[18px] font-black uppercase leading-none tracking-tight text-[#2D3748]">
-                      {remix.title}
-                    </p>
-                    <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-[#A8BED4]">
-                      {remix.creator} · {remix.city}
-                    </p>
-                    <p className="mt-2 line-clamp-2 min-h-[34px] text-[12px] font-semibold italic leading-relaxed text-[#718096]">
-                      {remix.story}
-                    </p>
-                    <div className="mt-3 grid grid-cols-[1fr_1fr_auto] items-center gap-2">
-                      <span className="rounded-lg bg-white px-2.5 py-2 text-[9px] font-black uppercase tracking-widest text-[#718096]">
-                        {remix.remixes} remix
-                      </span>
-                      <span className="rounded-lg bg-white px-2.5 py-2 text-[9px] font-black uppercase tracking-widest text-[#718096]">
-                        {(remix.likes / 1000).toFixed(1).replace('.', ',')}k likes
-                      </span>
-                      <span className="inline-flex items-center gap-1.5 rounded-lg bg-[#2D3748] px-3 py-2 text-[9px] font-black uppercase tracking-widest text-white">
-                        <Wand2 size={11} strokeWidth={2.2} />
-                        Ouvrir
-                      </span>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-[#D9E4F0] bg-[#F4F8FB] p-4 md:p-5 shadow-sm">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#3D5A73]">
-                <Save size={14} strokeWidth={2.1} />
-                Vos designs
-              </div>
-              <span className="rounded-full bg-white/85 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-[#718096]">
-                {savedDesigns.length}/24
-              </span>
-            </div>
-            {savedDesigns.length === 0 ? (
-              <div className="flex min-h-[138px] items-center justify-center rounded-xl border border-dashed border-[#BFD0DF] bg-white/55 px-4 text-center text-[12px] font-semibold italic text-[#718096]">
-                Sauvegardez une création pour la reprendre ou la partager.
-              </div>
-            ) : (
-              <div className="grid max-h-[180px] gap-2 overflow-y-auto pr-1">
-                {savedDesigns.slice(0, 5).map((design) => (
-                  <button
-                    key={design.id}
-                    type="button"
-                    onClick={() => handleSavedRemix(design.id, design.title, design.intention)}
-                    className="grid grid-cols-[1fr_auto] items-center gap-3 rounded-xl border border-white/80 bg-white p-3 text-left shadow-sm transition-colors hover:border-[#3D5A73]"
-                  >
-                    <span className="min-w-0">
-                      <span className="block truncate font-serif text-[14px] font-black uppercase tracking-tight text-[#2D3748]">
-                        {design.title || 'Ma création'}
-                      </span>
-                      <span className="block text-[10px] font-black uppercase tracking-widest text-[#A8BED4]">
-                        {design.components.length} pièces · {formatPrice(design.price)}
-                      </span>
-                    </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-lg bg-[#F5F0E8] px-3 py-2 text-[9px] font-black uppercase tracking-widest text-[#3D5A73]">
-                      <Wand2 size={11} strokeWidth={2.2} />
-                      Remix
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* ─── ADD TO CART ─── */}
-        <div className="mt-6 md:mt-8 grid sm:grid-cols-[1fr_auto] gap-3 items-stretch bg-[#F5F0E8] rounded-[1.5rem] p-4 md:p-5 border border-[#EEE9E0]">
-          <div className="flex items-center justify-between gap-3 px-2 sm:px-4">
-            <div>
-              <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-[#A8BED4] mb-1">
-                {atelier?.id === 'atelier_kawaii'
-                  ? `${atelier?.name} · ${atelier?.wireType}`
-                  : `${atelier?.name} · ${sizeLabel === 'custom' ? 'Perso' : sizeLabel} · ${sizeCm.toString().replace('.', ',')} cm`}
-              </p>
-              <p className="font-serif text-[14px] md:text-[16px] font-black uppercase tracking-tight text-[#2D3748]">
-                {fitMessage}
-              </p>
-            </div>
-            <p className="font-serif text-[24px] md:text-[28px] font-black tracking-tighter text-[#2D3748] tabular-nums shrink-0">
-              {formatPrice(price)}
-            </p>
-          </div>
-          <div ref={addToCartRef}>
-            <button
-              type="button"
-              onClick={handleAddToCart}
-              disabled={!canOrder}
-              className="w-full sm:w-auto h-full px-8 py-4 rounded-xl bg-[#3D5A73] hover:bg-[#2A3F50] text-white text-[11px] md:text-[13px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center justify-center gap-3"
-            >
-              {justAddedCart ? (
-                <>
-                  <Check size={16} strokeWidth={2.5} />
-                  Ajouté
-                </>
-              ) : (
-                <>
-                  <ShoppingBag size={16} strokeWidth={2} />
-                  Ajouter au panier
-                </>
-              )}
-            </button>
-          </div>
-        </div>
+        <div className="mt-6 hidden md:mt-8 lg:block">{renderFinalDetails()}</div>
       </div>
+
+      {portalReady ? createPortal(mobileActionBar, document.body) : null}
 
       {/* Floating ghost following the cursor while dragging from palette */}
       {paletteDrag?.active && (
@@ -1464,10 +1344,171 @@ export function Configurator() {
         />
       )}
 
+      <AnimatePresence>
+        {sharePanelOpen && (
+          <motion.div
+            key="share-panel"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.16 }}
+            className="fixed inset-0 z-[2050] flex items-center justify-center bg-[rgba(26,32,44,0.48)] p-3 backdrop-blur-sm"
+            onClick={() => setSharePanelOpen(false)}
+          >
+            <motion.div
+              initial={{ y: 24, opacity: 0, scale: 0.98 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: 16, opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+              className="w-full max-w-2xl overflow-hidden rounded-2xl border border-[#EEE9E0] bg-[#FBF8F2] shadow-2xl"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Partager la création"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="flex items-center justify-between gap-3 border-b border-[#EEE9E0] bg-white px-5 py-4">
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-[#A8BED4]">
+                    Partage
+                  </p>
+                  <h3 className="font-serif text-[22px] font-black uppercase leading-none tracking-tight text-[#2D3748]">
+                    {creationName}
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSharePanelOpen(false)}
+                  aria-label="Fermer le partage"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#F5F0E8] text-[#3D5A73] transition-colors hover:bg-[#EEE9E0]"
+                >
+                  <X size={17} strokeWidth={2.2} />
+                </button>
+              </div>
+              <div className="p-3 md:p-4">
+                <SharePreview
+                  components={components}
+                  figurine={figurine}
+                  title={creationName}
+                  intention={getPackagedIntention()}
+                  lengthMm={lengthMm}
+                  targetMm={targetMm}
+                  price={price}
+                  onCopyLink={handleCopyShareLink}
+                  copyStatus={shareStatus}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handleShareDesign();
+                  }}
+                  disabled={components.length === 0}
+                  className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#2D3748] text-[10px] font-black uppercase tracking-widest text-white transition-colors hover:bg-[#3D5A73] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Share2 size={13} strokeWidth={2.2} />
+                  Partager ma création
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {inspirationOpen && (
+          <motion.div
+            key="inspiration-panel"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.16 }}
+            className="fixed inset-0 z-[2050] bg-[rgba(26,32,44,0.48)] p-3 backdrop-blur-sm"
+            onClick={() => setInspirationOpen(false)}
+          >
+            <motion.div
+              initial={{ y: 34, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 24, opacity: 0 }}
+              transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
+              className="mx-auto flex max-h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-[#EEE9E0] bg-[#FBF8F2] shadow-2xl"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Galerie inspiration"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="flex items-center justify-between gap-3 border-b border-[#EEE9E0] bg-white px-5 py-4">
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-[#A8BED4]">
+                    Inspirations
+                  </p>
+                  <h3 className="font-serif text-[22px] font-black uppercase leading-none tracking-tight text-[#2D3748]">
+                    Partir d&rsquo;une base
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setInspirationOpen(false)}
+                  aria-label="Fermer la galerie"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#F5F0E8] text-[#3D5A73] transition-colors hover:bg-[#EEE9E0]"
+                >
+                  <X size={17} strokeWidth={2.2} />
+                </button>
+              </div>
+              <div className="overflow-y-auto p-3 md:p-4">{renderInspirationGallery()}</div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {finalizeOpen && (
+          <motion.div
+            key="finalize-panel"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.16 }}
+            className="fixed inset-0 z-[2050] bg-[rgba(26,32,44,0.48)] p-3 backdrop-blur-sm lg:hidden"
+            onClick={() => setFinalizeOpen(false)}
+          >
+            <motion.div
+              initial={{ y: 42, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 30, opacity: 0 }}
+              transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
+              className="absolute inset-x-3 bottom-3 max-h-[88vh] overflow-y-auto rounded-2xl border border-[#EEE9E0] bg-white p-3 shadow-2xl"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Finaliser la création"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="mb-3 flex items-center justify-between gap-3 px-1">
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-[#A8BED4]">
+                    Terminer ma création
+                  </p>
+                  <h3 className="font-serif text-[22px] font-black uppercase leading-none tracking-tight text-[#2D3748]">
+                    {creationName}
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setFinalizeOpen(false)}
+                  aria-label="Fermer la finalisation"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#F5F0E8] text-[#3D5A73] transition-colors hover:bg-[#EEE9E0]"
+                >
+                  <X size={17} strokeWidth={2.2} />
+                </button>
+              </div>
+              {renderFinalDetails({ inSheet: true })}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <UnboxingModal
         open={unboxingOpen}
         title={creationName}
-        intention={intention.trim()}
+        intention={getPackagedIntention() ?? ''}
         price={price}
         lengthMm={lengthMm}
         onClose={() => setUnboxingOpen(false)}
@@ -1556,7 +1597,7 @@ function UnboxingModal({
             <div className="p-6">
               <div className="mb-4 inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#3D5A73]">
                 <PackageCheck size={14} strokeWidth={2.2} />
-                Unboxing digital
+                Préparation atelier
               </div>
               <h3 className="font-serif text-[26px] font-black uppercase leading-none tracking-tight text-[#2D3748]">
                 {title}

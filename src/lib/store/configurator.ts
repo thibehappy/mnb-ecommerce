@@ -2,7 +2,14 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Bead, BraceletComponent, BraceletConfig, Charm, SizeLabel } from '@/types';
+import type {
+  Bead,
+  BraceletComponent,
+  BraceletConfig,
+  Charm,
+  FulfillmentMode,
+  SizeLabel,
+} from '@/types';
 import { BEAD_BY_ID } from '@/lib/mocks/beads';
 import { CHARM_BY_ID } from '@/lib/mocks/charms';
 import { ATELIER_BY_ID, ATELIERS } from '@/lib/mocks/ateliers';
@@ -294,7 +301,7 @@ export const useConfigurator = create<ConfiguratorState>()(
       sizeLabel: DEFAULT_SIZE,
       components: [],
       figurine: null,
-      step: 'atelier',
+      step: 'beads',
       selectedComponent: null,
       savedDesigns: [],
       draftTitle: '',
@@ -477,7 +484,7 @@ export const useConfigurator = create<ConfiguratorState>()(
           sizeLabel: DEFAULT_SIZE,
           components: [],
           figurine: null,
-          step: 'atelier',
+          step: 'beads',
           selectedComponent: null,
           draftTitle: '',
           draftIntention: '',
@@ -578,6 +585,7 @@ export function snapshotConfig(
   state: ConfiguratorState,
   title?: string,
   intention?: string,
+  fulfillmentMode: FulfillmentMode = 'assembled-paris',
 ): BraceletConfig {
   const now = new Date().toISOString();
   return {
@@ -591,6 +599,7 @@ export function snapshotConfig(
     updatedAt: now,
     title,
     intention,
+    fulfillmentMode,
     price: priceOf(state.atelierId, state.sizeLabel, state.components, state.figurine),
   };
 }

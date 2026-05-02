@@ -4,7 +4,7 @@ import { CHARM_BY_ID } from '@/lib/mocks/charms';
 import type { SizeFit } from '@/lib/store/configurator';
 
 export type CoachTone = 'empty' | 'progress' | 'ready' | 'issue';
-export type CoachAction = 'generate' | 'complete' | 'name' | 'share';
+export type CoachAction = 'generate' | 'complete' | 'name' | 'share' | 'lighten';
 
 export interface CoachCheck {
   id: string;
@@ -58,6 +58,11 @@ export function analyzeBraceletDesign({
   const hasAccent = charms.length > 0 || Boolean(figurine);
   const hasEnoughPieces = components.length >= 8;
   const hasVariety = familyCount >= 2 || hasAccent;
+  const heavyAccentCount = charms.length + (figurine ? 1 : 0);
+  const isCrowded = components.length >= 30 || heavyAccentCount >= 3 || fit.status === 'too-long';
+  const lightRatio = lightBeadRatio(beads);
+  const darkRatio = darkBeadRatio(beads);
+  const minimalStyle = beads.length > 0 && familyCount <= 2 && heavyAccentCount === 0;
 
   let score = components.length === 0 ? 12 : 28;
   if (fit.status === 'ready') score += 34;
@@ -72,6 +77,8 @@ export function analyzeBraceletDesign({
   if (hasAccent) score += 7;
   if (hasTitle) score += 5;
   if (hasIntention) score += 5;
+  if (isCrowded) score -= 8;
+  if (darkRatio > 0.7 && lightRatio < 0.2) score -= 4;
   score = clamp(score, 0, 100);
 
   const tone: CoachTone =
@@ -86,39 +93,62 @@ export function analyzeBraceletDesign({
   return {
     score,
     tone,
-    label: labelFor(score, fit.status),
-    summary: summaryFor(fit.status, fit.remainingMm, fit.overflowMm),
-    signature: signatureFor(beads, charms.length, Boolean(figurine)),
+    label: labelFor(score, fit.status, { minimalStyle, isCrowded }),
+    summary: summaryFor(fit.status, fit.remainingMm, fit.overflowMm, {
+      minimalStyle,
+      isCrowded,
+      lightRatio,
+    }),
+    signature: signatureFor(beads, charms.length, Boolean(figurine), minimalStyle),
     checks: [
-      { id: 'fit', label: 'Ajustement', ok: fit.status === 'ready' },
-      { id: 'pieces', label: 'Matière', ok: hasEnoughPieces },
-      { id: 'variety', label: 'Variation', ok: hasVariety },
-      { id: 'story', label: 'Histoire', ok: hasTitle || hasIntention },
+      { id: 'fit', label: 'Prêt commande', ok: fit.status === 'ready' },
+      { id: 'pieces', label: 'Rythme', ok: hasEnoughPieces && !isCrowded },
+      { id: 'variety', label: 'Équilibre', ok: hasVariety && lightRatio >= 0.15 },
+      { id: 'story', label: 'Cadeau', ok: hasTitle || hasIntention },
     ],
     suggestions: suggestionsFor({
       components,
+      beads,
       fit,
       familyCount,
       hasTitle,
       hasIntention,
       hasAccent,
+      isCrowded,
+      lightRatio,
+      darkRatio,
     }),
   };
 }
 
-function labelFor(score: number, status: SizeFit['status']): string {
+function labelFor(
+  score: number,
+  status: SizeFit['status'],
+  details: { minimalStyle: boolean; isCrowded: boolean },
+): string {
   if (status === 'empty') return 'À démarrer';
-  if (status === 'too-long') return 'À corriger';
-  if (score >= 86) return 'Signature mondiale';
-  if (score >= 72) return 'Prêt boutique';
+  if (status === 'too-long' || details.isCrowded) return 'Trop chargé';
+  if (details.minimalStyle && score >= 64) return 'Style minimal';
+  if (score >= 86) return 'Très harmonieux';
+  if (score >= 72) return 'Prêt à commander';
   if (score >= 55) return 'Très proche';
   return 'En construction';
 }
 
-function summaryFor(status: SizeFit['status'], remainingMm: number, overflowMm: number): string {
+function summaryFor(
+  status: SizeFit['status'],
+  remainingMm: number,
+  overflowMm: number,
+  details: { minimalStyle: boolean; isCrowded: boolean; lightRatio: number },
+): string {
   if (status === 'empty') return 'Une base guidée peut créer un premier rythme en quelques secondes.';
+  if (status === 'ready' && details.minimalStyle) {
+    return 'La longueur est prête et le style reste lisible. Parfait pour une création discrète.';
+  }
   if (status === 'ready') return 'La longueur est prête. Le design peut passer en partage ou au panier.';
   if (status === 'too-long') return `Le bracelet dépasse de ${formatCm(overflowMm)}. Une pièce doit sortir.`;
+  if (details.isCrowded) return 'La composition a besoin de respirer pour rester premium.';
+  if (details.lightRatio < 0.15) return 'Une perle claire peut illuminer la composition et mieux équilibrer le centre.';
   return `Il manque encore ${formatCm(remainingMm)} pour atteindre une longueur confortable.`;
 }
 
@@ -126,8 +156,10 @@ function signatureFor(
   beads: Array<NonNullable<(typeof BEAD_BY_ID)[string]>>,
   charmCount: number,
   hasFigurine: boolean,
+  minimalStyle: boolean,
 ): string {
   if (beads.length === 0) return 'Toile blanche';
+  if (minimalStyle) return 'minimal · sans surcharge';
   const familyCounts = new Map<string, number>();
   for (const bead of beads) familyCounts.set(bead.family, (familyCounts.get(bead.family) ?? 0) + 1);
   const dominant = [...familyCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'mix';
@@ -137,18 +169,26 @@ function signatureFor(
 
 function suggestionsFor({
   components,
+  beads,
   fit,
   familyCount,
   hasTitle,
   hasIntention,
   hasAccent,
+  isCrowded,
+  lightRatio,
+  darkRatio,
 }: {
   components: BraceletComponent[];
+  beads: Array<NonNullable<(typeof BEAD_BY_ID)[string]>>;
   fit: SizeFit;
   familyCount: number;
   hasTitle: boolean;
   hasIntention: boolean;
   hasAccent: boolean;
+  isCrowded: boolean;
+  lightRatio: number;
+  darkRatio: number;
 }): CoachSuggestion[] {
   const suggestions: CoachSuggestion[] = [];
 
@@ -176,6 +216,22 @@ function suggestionsFor({
       id: 'too-long',
       label: 'Alléger le rythme',
       detail: `${formatCm(fit.overflowMm)} en trop. Retirez une grosse perle ou un charm.`,
+      action: 'lighten',
+    });
+  } else if (isCrowded) {
+    suggestions.push({
+      id: 'crowded',
+      label: 'Donner de l’air',
+      detail: 'Retirez une pièce forte pour éviter l’effet trop chargé.',
+      action: 'lighten',
+    });
+  }
+
+  if (darkRatio > 0.62 && lightRatio < 0.2) {
+    suggestions.push({
+      id: 'light-balance',
+      label: 'Ajouter une perle claire',
+      detail: 'Une nacre ou une perle douce équilibre les tons sombres et rend le bracelet plus lisible.',
     });
   }
 
@@ -213,7 +269,34 @@ function suggestionsFor({
     });
   }
 
+  if (fit.status === 'ready' && suggestions.length === 0 && beads.length >= 12) {
+    suggestions.push({
+      id: 'ready',
+      label: 'Prêt à commander',
+      detail: 'La longueur, le rythme et la lisibilité sont cohérents.',
+      action: 'share',
+    });
+  }
+
   return suggestions.slice(0, 3);
+}
+
+function lightBeadRatio(beads: Array<NonNullable<(typeof BEAD_BY_ID)[string]>>): number {
+  if (beads.length === 0) return 0;
+  return beads.filter((bead) => luminance(bead.hex) > 0.72).length / beads.length;
+}
+
+function darkBeadRatio(beads: Array<NonNullable<(typeof BEAD_BY_ID)[string]>>): number {
+  if (beads.length === 0) return 0;
+  return beads.filter((bead) => luminance(bead.hex) < 0.28).length / beads.length;
+}
+
+function luminance(hex: string): number {
+  const clean = hex.replace('#', '');
+  const r = Number.parseInt(clean.slice(0, 2), 16) / 255;
+  const g = Number.parseInt(clean.slice(2, 4), 16) / 255;
+  const b = Number.parseInt(clean.slice(4, 6), 16) / 255;
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
 function formatCm(mm: number): string {

@@ -29,11 +29,7 @@ export async function generateMetadata({
   };
 }
 
-export default async function KitDetailPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+export default async function KitDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const kit = await getKitBySlug(slug);
   if (!kit) notFound();
@@ -59,17 +55,23 @@ export default async function KitDetailPage({
     <>
       <script
         type="application/ld+json"
-        // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: JSON.stringify(kitJsonLd(kit)) }}
       />
 
       <section className="py-10 md:py-16 bg-[#F5F0E8]">
         <div className="container mx-auto px-4 md:px-6">
           {/* Breadcrumb */}
-          <nav aria-label="Fil d'Ariane" className="text-[10px] font-black uppercase tracking-widest mb-8 text-[#718096]">
-            <Link href="/" className="hover:text-[#2D3748]">Accueil</Link>
+          <nav
+            aria-label="Fil d'Ariane"
+            className="text-[10px] font-black uppercase tracking-widest mb-8 text-[#718096]"
+          >
+            <Link href="/" className="hover:text-[#2D3748]">
+              Accueil
+            </Link>
             <span className="mx-2">·</span>
-            <Link href="/kits" className="hover:text-[#2D3748]">Kits</Link>
+            <Link href="/kits" className="hover:text-[#2D3748]">
+              Kits
+            </Link>
             <span className="mx-2">·</span>
             <span className="text-[#2D3748]">{kit.name}</span>
           </nav>

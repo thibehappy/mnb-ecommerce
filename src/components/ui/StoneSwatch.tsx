@@ -39,6 +39,8 @@ export function StoneSwatch({
   zoom = 3,
 }: Props) {
   if (image) {
+    const imageRequestSize = Math.ceil(size * Math.max(1, zoom) * 2);
+
     return (
       <div
         className={cn('relative shrink-0 select-none overflow-hidden', className)}
@@ -49,8 +51,11 @@ export function StoneSwatch({
         <Image
           src={image}
           alt={title ?? ''}
-          width={size}
-          height={size}
+          width={imageRequestSize}
+          height={imageRequestSize}
+          sizes={`${imageRequestSize}px`}
+          quality={95}
+          loading="eager"
           draggable={false}
           style={{ transform: `scale(${zoom})` }}
           className="object-contain w-full h-full pointer-events-none select-none"

@@ -269,6 +269,8 @@ export interface BraceletConfig {
   ownerId?: UUID;
   /** Human-given title, for saved designs */
   title?: string;
+  /** Short intention printed/attached to the handmade order when available. */
+  intention?: string;
   /** Fixed price from atelier.sizes — single source of truth */
   price: Euros;
 }

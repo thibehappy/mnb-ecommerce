@@ -113,6 +113,20 @@ const BEADS_RAW: Bead[] = [
     description: 'Cube en pierre de lune translucide, sculpté à la main.',
     images: [],
   },
+  {
+    id: 'bead_celeste_8',
+    name: 'Céleste',
+    family: 'moonstone',
+    hex: '#A9BED4',
+    veinHex: '#7F91A8',
+    shape: 'round',
+    sizeMm: 8,
+    price: 3.2,
+    stock: 80,
+    description: 'Perle bleu laiteux translucide, douce et lumineuse.',
+    meaning: ['clarté', 'douceur'],
+    images: [],
+  },
 
   // ─── Enamel beads (formes émaillées) ───
   // Perles décoratives non semi-précieuses, percées comme une perle classique.
@@ -180,6 +194,19 @@ const BEADS_RAW: Bead[] = [
     price: 5.0,
     stock: 80,
     description: 'Nœud papillon ivoire à reflets nacrés.',
+    images: [],
+  },
+  {
+    id: 'bead_bow_pearl_v2',
+    name: 'Nœud nacré V2',
+    family: 'enamel',
+    hex: '#E6D978',
+    veinHex: '#BFB35F',
+    shape: 'bow',
+    sizeMm: 10,
+    price: 5.0,
+    stock: 80,
+    description: 'Nœud papillon nacré nouvelle photo, reflets irisés plus détaillés.',
     images: [],
   },
   {

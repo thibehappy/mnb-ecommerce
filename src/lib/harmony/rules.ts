@@ -50,9 +50,7 @@ function beadsFor(family: StoneFamily): Bead[] {
 }
 
 function charmsFor(categories: Charm['category'][], kind?: CharmKind): Charm[] {
-  return CHARMS.filter(
-    (c) => categories.includes(c.category) && (!kind || c.kind === kind),
-  );
+  return CHARMS.filter((c) => categories.includes(c.category) && (!kind || c.kind === kind));
 }
 
 export interface InspiredConfig {
@@ -73,6 +71,8 @@ export interface InspireConstraints {
   targetMm?: number;
   /** Minimum acceptable circumference in mm (for fixed-range ateliers). */
   minMm?: number;
+  /** Maximum acceptable circumference in mm, including any UX tolerance. */
+  maxMm?: number;
   allowedBeadFamilies?: StoneFamily[];
   allowedCharmCategories?: CharmCategory[];
   allowCharms?: boolean;
@@ -87,6 +87,7 @@ export function inspire(mood?: Mood, constraints?: InspireConstraints): Inspired
   const recipe = RECIPES[chosenMood];
   const targetMm = Math.max(0, constraints?.targetMm ?? 170);
   const minMm = Math.max(0, constraints?.minMm ?? targetMm);
+  const maxMm = Math.max(minMm, constraints?.maxMm ?? targetMm);
   const allowCharms = constraints?.allowCharms ?? true;
   const maxCharms = Math.min(constraints?.maxCharms ?? 1, allowCharms ? 3 : 0);
 
@@ -109,13 +110,17 @@ export function inspire(mood?: Mood, constraints?: InspireConstraints): Inspired
   const secondaryChoices = beadsFor(secondaryFam!);
   const accentChoices = beadsFor(accentFam!);
 
-  const fallbackBeads = allowedFams
-    ? BEADS.filter((b) => allowedFams.includes(b.family))
-    : BEADS;
+  const fallbackBeads = allowedFams ? BEADS.filter((b) => allowedFams.includes(b.family)) : BEADS;
 
-  const primary = pickRandom(primaryChoices.length ? primaryChoices : fallbackBeads.length ? fallbackBeads : BEADS);
-  const secondary = pickRandom(secondaryChoices.length ? secondaryChoices : fallbackBeads.length ? fallbackBeads : BEADS);
-  const accent = pickRandom(accentChoices.length ? accentChoices : fallbackBeads.length ? fallbackBeads : BEADS);
+  const primary = pickRandom(
+    primaryChoices.length ? primaryChoices : fallbackBeads.length ? fallbackBeads : BEADS,
+  );
+  const secondary = pickRandom(
+    secondaryChoices.length ? secondaryChoices : fallbackBeads.length ? fallbackBeads : BEADS,
+  );
+  const accent = pickRandom(
+    accentChoices.length ? accentChoices : fallbackBeads.length ? fallbackBeads : BEADS,
+  );
 
   // Restrict charms : intersect mood recipe with atelier whitelist + filter by kind.
   const allowedCharmCats = constraints?.allowedCharmCategories;
@@ -164,7 +169,7 @@ export function inspire(mood?: Mood, constraints?: InspireConstraints): Inspired
       chordCharm &&
       charmsPlaced < maxCharms &&
       totalMm >= charmInsertAtMm &&
-      totalMm + chordCharm.sizeMm <= targetMm
+      totalMm + chordCharm.sizeMm <= maxMm
     ) {
       components.push({ slotId: uid('s'), kind: 'charm', refId: chordCharm.id });
       totalMm += chordCharm.sizeMm;
@@ -174,7 +179,7 @@ export function inspire(mood?: Mood, constraints?: InspireConstraints): Inspired
     }
 
     const bead = bgSeq[i % bgSeq.length]!;
-    if (totalMm + bead.sizeMm > targetMm + 0.0001) break;
+    if (totalMm + bead.sizeMm > maxMm + 0.0001) break;
     components.push({ slotId: uid('s'), kind: 'bead', refId: bead.id });
     totalMm += bead.sizeMm;
     i++;
@@ -185,10 +190,10 @@ export function inspire(mood?: Mood, constraints?: InspireConstraints): Inspired
   // If we ended up too short of minMm (rare — fixed-range), keep going with the
   // smallest available bead until we cross minMm or run out of room.
   if (totalMm < minMm) {
-    const smallest = (fallbackBeads.length ? fallbackBeads : BEADS).slice().sort(
-      (a, b) => a.sizeMm - b.sizeMm,
-    )[0];
-    while (smallest && totalMm + smallest.sizeMm <= targetMm + 0.0001) {
+    const smallest = (fallbackBeads.length ? fallbackBeads : BEADS)
+      .slice()
+      .sort((a, b) => a.sizeMm - b.sizeMm)[0];
+    while (smallest && totalMm + smallest.sizeMm <= maxMm + 0.0001) {
       components.push({ slotId: uid('s'), kind: 'bead', refId: smallest.id });
       totalMm += smallest.sizeMm;
       if (totalMm >= minMm) break;

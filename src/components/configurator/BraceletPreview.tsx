@@ -422,7 +422,11 @@ export const BraceletPreview = forwardRef<BraceletPreviewHandle, Props>(function
   // Pan-drag state — track the cursor + initial pan so we can update via
   // delta on each pointermove. Stored in a ref so window listeners don't
   // need to re-bind on every render.
-  const panDragRef = useRef<{ startX: number; startY: number; startPan: { x: number; y: number } } | null>(null);
+  const panDragRef = useRef<{
+    startX: number;
+    startY: number;
+    startPan: { x: number; y: number };
+  } | null>(null);
   const [isPanning, setIsPanning] = useState(false);
 
   const positions = useMemo(
@@ -433,16 +437,12 @@ export const BraceletPreview = forwardRef<BraceletPreviewHandle, Props>(function
   const dragRenderX = drag ? drag.cx + drag.offsetX : 0;
   const dragRenderY = drag ? drag.cy + drag.offsetY : 0;
 
-  const ghosts = useMemo(
-    () => computeGhostPositions(components, variant),
-    [components, variant],
-  );
+  const ghosts = useMemo(() => computeGhostPositions(components, variant), [components, variant]);
 
   // Reorder drop target (internal drag of an existing component)
   const reorderTargetIdx = useMemo(() => {
     if (!drag || !drag.active) return null;
     return nearestInsertIdx(dragRenderX, dragRenderY, components, variant, targetMm);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [drag, dragRenderX, dragRenderY, components, variant, targetMm]);
 
   // External drag (from palette) → snap insert index
@@ -450,7 +450,6 @@ export const BraceletPreview = forwardRef<BraceletPreviewHandle, Props>(function
     if (!externalDrag || !svgRef.current) return null;
     const sp = clientToSvg(svgRef.current, externalDrag.x, externalDrag.y);
     return nearestInsertIdx(sp.x, sp.y, components, variant, targetMm);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [externalDrag, components, variant, targetMm]);
 
   useImperativeHandle(
@@ -504,8 +503,7 @@ export const BraceletPreview = forwardRef<BraceletPreviewHandle, Props>(function
       //   - if reorderTargetIdx <= drag.fromIdx : the bead lands at reorderTargetIdx
       //   - if reorderTargetIdx > drag.fromIdx  : after removing fromIdx, the
       //     target index shifts down by 1
-      const target =
-        reorderTargetIdx <= drag.fromIdx ? reorderTargetIdx : reorderTargetIdx - 1;
+      const target = reorderTargetIdx <= drag.fromIdx ? reorderTargetIdx : reorderTargetIdx - 1;
       if (target !== drag.fromIdx) {
         onMove(drag.fromIdx, target);
         haptic([6, 18, 6]);
@@ -560,7 +558,10 @@ export const BraceletPreview = forwardRef<BraceletPreviewHandle, Props>(function
    * components, redistributed evenly) so the phantom matches exactly where
    * the bead will appear after dropping.
    */
-  function insertGapPos(k: number, newMm: number): { x: number; y: number; rot: number; radius: number } | null {
+  function insertGapPos(
+    k: number,
+    newMm: number,
+  ): { x: number; y: number; rot: number; radius: number } | null {
     if (k < 0) return null;
     const dim = viewBoxFor(variant);
     const path = pathFor(variant, dim);
@@ -589,8 +590,7 @@ export const BraceletPreview = forwardRef<BraceletPreviewHandle, Props>(function
     };
   }
 
-  const stageCursor =
-    isPanning ? 'grabbing' : safeZoom > 1.01 && onPanChange ? 'grab' : 'default';
+  const stageCursor = isPanning ? 'grabbing' : safeZoom > 1.01 && onPanChange ? 'grab' : 'default';
 
   return (
     <div
@@ -608,267 +608,314 @@ export const BraceletPreview = forwardRef<BraceletPreviewHandle, Props>(function
           // and bottom — combined with items-center on the parent stage and
           // a tall enough min-h, the bracelet stays nicely framed when zoomed.
           transformOrigin: 'center',
-          transition: isPanning
-            ? 'none'
-            : 'transform 0.42s cubic-bezier(0.22, 1, 0.36, 1)',
+          transition: isPanning ? 'none' : 'transform 0.42s cubic-bezier(0.22, 1, 0.36, 1)',
           willChange: 'transform',
         }}
       >
-      <svg
-        ref={svgRef}
-        viewBox={`0 0 ${width} ${height}`}
-        className="block w-full h-auto"
-        preserveAspectRatio="xMidYMid meet"
-        // Allow bead photos to bleed past the viewBox edges (otherwise the
-        // big bead images at the curve extremities get sliced by SVG's
-        // default overflow:hidden). The outer wrapper still clips at its
-        // own bounds, so this is safe.
-        style={{ overflow: 'visible' }}
-        role="img"
-        aria-label="Aperçu du bracelet"
-        onPointerMove={drag ? handlePointerMove : undefined}
-      >
-        <defs>
-          <filter id="mnb-glow" x="-40%" y="-40%" width="180%" height="180%">
-            <feGaussianBlur stdDeviation="4" result="b" />
-            <feMerge>
-              <feMergeNode in="b" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
+        <svg
+          ref={svgRef}
+          viewBox={`0 0 ${width} ${height}`}
+          className="block w-full h-auto"
+          preserveAspectRatio="xMidYMid meet"
+          // Allow bead photos to bleed past the viewBox edges (otherwise the
+          // big bead images at the curve extremities get sliced by SVG's
+          // default overflow:hidden). The outer wrapper still clips at its
+          // own bounds, so this is safe.
+          style={{ overflow: 'visible' }}
+          role="img"
+          aria-label="Aperçu du bracelet"
+          onPointerMove={drag ? handlePointerMove : undefined}
+        >
+          <defs>
+            <filter id="mnb-glow" x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur stdDeviation="4" result="b" />
+              <feMerge>
+                <feMergeNode in="b" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
 
-        {/* Cord — always shown (the bracelet skeleton) */}
-        <Cord variant={variant} width={width} height={height} />
+          {/* Cord — always shown (the bracelet skeleton) */}
+          <Cord variant={variant} width={width} height={height} />
 
-        {/* Placeholder ghosts — visual hints for where additional beads can
+          {/* Placeholder ghosts — visual hints for where additional beads can
              go on the remaining cord. Pure decoration : they don't capture
              pointer events (the drop target is computed by arc-length
              projection, not by ghost proximity). */}
-        <g pointerEvents="none">
-          {ghosts.map((g, i) => (
-            <g key={`ghost-${i}`} transform={`translate(${g.x}, ${g.y})`}>
-              <circle r={14} fill="#A8BED4" fillOpacity="0.1" />
-              <circle
-                r={14}
-                fill="none"
-                stroke="#A8BED4"
-                strokeWidth="1.2"
-                strokeDasharray="2 3"
-              />
-            </g>
-          ))}
-        </g>
+          <g pointerEvents="none">
+            {ghosts.map((g, i) => (
+              <g key={`ghost-${i}`} transform={`translate(${g.x}, ${g.y})`}>
+                <circle r={14} fill="#A8BED4" fillOpacity="0.1" />
+                <circle
+                  r={14}
+                  fill="none"
+                  stroke="#A8BED4"
+                  strokeWidth="1.2"
+                  strokeDasharray="2 3"
+                />
+              </g>
+            ))}
+          </g>
 
-        {/* External drag drop hint — phantom preview of the dragged item at
+          {/* External drag drop hint — phantom preview of the dragged item at
              the candidate insert position. Lets the user clearly SEE where
              the bead will land before releasing. */}
-        {externalDrag &&
-          externalInsertIdx !== null &&
-          (() => {
-            // Compute the dragged item's mm size so the phantom matches the
-            // bead it represents.
-            const draggedMm =
-              externalDrag.kind === 'bead'
-                ? BEAD_BY_ID[externalDrag.refId]?.sizeMm ?? 8
-                : CHARM_BY_ID[externalDrag.refId]?.sizeMm ?? 8;
-            const gap = insertGapPos(externalInsertIdx, draggedMm);
-            if (!gap) return null;
-            // gap.radius is the photo BOX (3× the visible bead). For the halo
-            // and the dashed outline we use the visible bead size so they hug
-            // the bead instead of swallowing a much larger area.
-            const coreR = gap.radius / BRACELET_ZOOM;
-            const draggedBead =
-              externalDrag.kind === 'bead' ? BEAD_BY_ID[externalDrag.refId] : null;
-            const draggedCharm =
-              externalDrag.kind === 'charm' ? CHARM_BY_ID[externalDrag.refId] : null;
-            return (
-              <g pointerEvents="none" transform={`translate(${gap.x}, ${gap.y})`} opacity="0.85">
-                {/* Pulsing halo behind the phantom for emphasis */}
-                <circle r={coreR + 6} fill="#3D5A73" fillOpacity="0.2">
-                  <animate
-                    attributeName="r"
-                    values={`${coreR + 4};${coreR + 10};${coreR + 4}`}
-                    dur="0.9s"
-                    repeatCount="indefinite"
-                  />
-                </circle>
-                {/* Phantom bead/charm preview */}
-                {draggedBead && draggedBead.images[0] && (
-                  <g transform={`rotate(${gap.rot})`}>
+          {externalDrag &&
+            externalInsertIdx !== null &&
+            (() => {
+              // Compute the dragged item's mm size so the phantom matches the
+              // bead it represents.
+              const draggedMm =
+                externalDrag.kind === 'bead'
+                  ? (BEAD_BY_ID[externalDrag.refId]?.sizeMm ?? 8)
+                  : (CHARM_BY_ID[externalDrag.refId]?.sizeMm ?? 8);
+              const gap = insertGapPos(externalInsertIdx, draggedMm);
+              if (!gap) return null;
+              // gap.radius is the photo BOX (3× the visible bead). For the halo
+              // and the dashed outline we use the visible bead size so they hug
+              // the bead instead of swallowing a much larger area.
+              const coreR = gap.radius / BRACELET_ZOOM;
+              const draggedBead =
+                externalDrag.kind === 'bead' ? BEAD_BY_ID[externalDrag.refId] : null;
+              const draggedCharm =
+                externalDrag.kind === 'charm' ? CHARM_BY_ID[externalDrag.refId] : null;
+              return (
+                <g pointerEvents="none" transform={`translate(${gap.x}, ${gap.y})`} opacity="0.85">
+                  {/* Pulsing halo behind the phantom for emphasis */}
+                  <circle r={coreR + 6} fill="#3D5A73" fillOpacity="0.2">
+                    <animate
+                      attributeName="r"
+                      values={`${coreR + 4};${coreR + 10};${coreR + 4}`}
+                      dur="0.9s"
+                      repeatCount="indefinite"
+                    />
+                  </circle>
+                  {/* Phantom bead/charm preview */}
+                  {draggedBead && draggedBead.images[0] && (
+                    <g transform={`rotate(${gap.rot})`}>
+                      <image
+                        href={draggedBead.images[0]}
+                        x={-gap.radius}
+                        y={-gap.radius}
+                        width={gap.radius * 2}
+                        height={gap.radius * 2}
+                        preserveAspectRatio="xMidYMid meet"
+                      />
+                    </g>
+                  )}
+                  {draggedCharm && draggedCharm.images[0] && (
                     <image
-                      href={draggedBead.images[0]}
+                      href={draggedCharm.images[0]}
                       x={-gap.radius}
                       y={-gap.radius}
                       width={gap.radius * 2}
                       height={gap.radius * 2}
                       preserveAspectRatio="xMidYMid meet"
                     />
-                  </g>
-                )}
-                {draggedCharm && draggedCharm.images[0] && (
-                  <image
-                    href={draggedCharm.images[0]}
-                    x={-gap.radius}
-                    y={-gap.radius}
-                    width={gap.radius * 2}
-                    height={gap.radius * 2}
-                    preserveAspectRatio="xMidYMid meet"
-                  />
-                )}
-                <circle
-                  r={coreR + 2}
-                  fill="none"
-                  stroke="#3D5A73"
-                  strokeWidth="1.5"
-                  strokeDasharray="3 3"
-                />
-              </g>
-            );
-          })()}
-
-        {/* Reorder drop hint — when dragging an existing bead */}
-        {drag?.active &&
-          reorderTargetIdx !== null &&
-          (() => {
-            // Use the dragged bead's own mm size for an accurate preview.
-            const dragged = components[drag.fromIdx];
-            const draggedMm = dragged ? sizeMmOf(dragged) : 8;
-            const gap = insertGapPos(reorderTargetIdx, draggedMm);
-            if (!gap) return null;
-            const coreR = gap.radius / BRACELET_ZOOM;
-            return (
-              <g pointerEvents="none">
-                <circle cx={gap.x} cy={gap.y} r={coreR + 4} fill="#3D5A73" fillOpacity="0.16" />
-                <circle
-                  cx={gap.x}
-                  cy={gap.y}
-                  r={coreR + 4}
-                  fill="none"
-                  stroke="#3D5A73"
-                  strokeWidth="1.5"
-                  strokeDasharray="3 3"
-                />
-              </g>
-            );
-          })()}
-
-        {/* Figurine attached to the bracelet — rendered NEXT TO the cord
-             (not as a slot on it). Only Kawaii passes a figurine. */}
-        {figurine &&
-          (() => {
-            const charm = CHARM_BY_ID[figurine.refId];
-            if (!charm || !charm.images[0]) return null;
-            // Anchor : on the LEFT of the bracelet.
-            // For the U (Kawaii) we sit it at the vertical level of the
-            // opening, in the empty space left of the left leg.
-            // For other variants, fall back to a top-left position.
-            const figCx = variant === 'u' ? U_GEOM.xLeft - 240 : 130;
-            const figCy = variant === 'u' ? U_GEOM.yTop + 130 : 130;
-            const figR = 90;
-            const isFigSelected = figurine.slotId === selectedSlotId;
-            return (
-              <g
-                transform={`translate(${figCx}, ${figCy})`}
-                onPointerDown={(e) => {
-                  e.stopPropagation();
-                  onSelect?.(figurine.slotId);
-                }}
-                style={{ cursor: onSelect ? 'pointer' : 'default' }}
-              >
-                {/* Soft halo behind the figurine */}
-                <circle r={figR + 18} fill="#FFFFFF" fillOpacity="0.55" />
-                <circle
-                  r={figR + 18}
-                  fill="none"
-                  stroke="#A8BED4"
-                  strokeWidth="1.4"
-                  strokeDasharray="3 4"
-                  opacity="0.7"
-                />
-                {/* "Attached" link — dashed line from the figurine halo
-                     toward the U's left leg, suggesting the clasp. */}
-                {variant === 'u' && (
-                  <line
-                    x1={figR + 18}
-                    y1={0}
-                    x2={U_GEOM.xLeft - figCx}
-                    y2={0}
-                    stroke="#A8BED4"
+                  )}
+                  <circle
+                    r={coreR + 2}
+                    fill="none"
+                    stroke="#3D5A73"
                     strokeWidth="1.5"
-                    strokeDasharray="2 3"
-                    opacity="0.5"
-                  />
-                )}
-                {isFigSelected && (
-                  <circle r={figR + 26} fill="#A8BED4" fillOpacity="0.4">
-                    <animate
-                      attributeName="r"
-                      values={`${figR + 22};${figR + 32};${figR + 22}`}
-                      dur="1.6s"
-                      repeatCount="indefinite"
-                    />
-                  </circle>
-                )}
-                <g filter={isFigSelected ? 'url(#mnb-glow)' : undefined}>
-                  <image
-                    href={charm.images[0]}
-                    x={-figR}
-                    y={-figR}
-                    width={figR * 2}
-                    height={figR * 2}
-                    preserveAspectRatio="xMidYMid meet"
+                    strokeDasharray="3 3"
                   />
                 </g>
-                {isFigSelected && (
-                  <circle r={figR + 4} fill="none" stroke="#3D5A73" strokeWidth="2" />
-                )}
-              </g>
-            );
-          })()}
+              );
+            })()}
 
-        <g>
-          {components.map((comp, i) => {
-            const pos = positions[i];
-            if (!pos) return null;
-            const isDragged = drag?.fromIdx === i && drag.active;
-            const x = isDragged ? dragRenderX : pos.x;
-            const y = isDragged ? dragRenderY : pos.y;
+          {/* Reorder drop hint — when dragging an existing bead */}
+          {drag?.active &&
+            reorderTargetIdx !== null &&
+            (() => {
+              // Use the dragged bead's own mm size for an accurate preview.
+              const dragged = components[drag.fromIdx];
+              const draggedMm = dragged ? sizeMmOf(dragged) : 8;
+              const gap = insertGapPos(reorderTargetIdx, draggedMm);
+              if (!gap) return null;
+              const coreR = gap.radius / BRACELET_ZOOM;
+              return (
+                <g pointerEvents="none">
+                  <circle cx={gap.x} cy={gap.y} r={coreR + 4} fill="#3D5A73" fillOpacity="0.16" />
+                  <circle
+                    cx={gap.x}
+                    cy={gap.y}
+                    r={coreR + 4}
+                    fill="none"
+                    stroke="#3D5A73"
+                    strokeWidth="1.5"
+                    strokeDasharray="3 3"
+                  />
+                </g>
+              );
+            })()}
 
-            const common = {
-              transform: `translate(${x}, ${y})`,
-              onPointerDown: (e: React.PointerEvent) => handlePointerDown(e, i),
-              onPointerUp: (e: React.PointerEvent) => handlePointerUp(e, i),
-              onPointerCancel: handlePointerCancel,
-              style: {
-                cursor: onMove ? (isDragged ? 'grabbing' : 'grab') : onSelect ? 'pointer' : 'default',
-                transition: isDragged
-                  ? 'none'
-                  : 'transform 0.22s cubic-bezier(0.22, 1, 0.36, 1)',
-              } as React.CSSProperties,
-            };
+          {/* Figurine attached to the bracelet — rendered NEXT TO the cord
+             (not as a slot on it). Only Kawaii passes a figurine. */}
+          {figurine &&
+            (() => {
+              const charm = CHARM_BY_ID[figurine.refId];
+              if (!charm || !charm.images[0]) return null;
+              // Anchor : on the LEFT of the bracelet.
+              // For the U (Kawaii) we sit it at the vertical level of the
+              // opening, in the empty space left of the left leg.
+              // For other variants, fall back to a top-left position.
+              const figCx = variant === 'u' ? U_GEOM.xLeft - 240 : 130;
+              const figCy = variant === 'u' ? U_GEOM.yTop + 130 : 130;
+              const figR = 90;
+              const isFigSelected = figurine.slotId === selectedSlotId;
+              return (
+                <g
+                  transform={`translate(${figCx}, ${figCy})`}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    onSelect?.(figurine.slotId);
+                  }}
+                  style={{ cursor: onSelect ? 'pointer' : 'default' }}
+                >
+                  {/* Soft halo behind the figurine */}
+                  <circle r={figR + 18} fill="#FFFFFF" fillOpacity="0.55" />
+                  <circle
+                    r={figR + 18}
+                    fill="none"
+                    stroke="#A8BED4"
+                    strokeWidth="1.4"
+                    strokeDasharray="3 4"
+                    opacity="0.7"
+                  />
+                  {/* "Attached" link — dashed line from the figurine halo
+                     toward the U's left leg, suggesting the clasp. */}
+                  {variant === 'u' && (
+                    <line
+                      x1={figR + 18}
+                      y1={0}
+                      x2={U_GEOM.xLeft - figCx}
+                      y2={0}
+                      stroke="#A8BED4"
+                      strokeWidth="1.5"
+                      strokeDasharray="2 3"
+                      opacity="0.5"
+                    />
+                  )}
+                  {isFigSelected && (
+                    <circle r={figR + 26} fill="#A8BED4" fillOpacity="0.4">
+                      <animate
+                        attributeName="r"
+                        values={`${figR + 22};${figR + 32};${figR + 22}`}
+                        dur="1.6s"
+                        repeatCount="indefinite"
+                      />
+                    </circle>
+                  )}
+                  <g filter={isFigSelected ? 'url(#mnb-glow)' : undefined}>
+                    <image
+                      href={charm.images[0]}
+                      x={-figR}
+                      y={-figR}
+                      width={figR * 2}
+                      height={figR * 2}
+                      preserveAspectRatio="xMidYMid meet"
+                    />
+                  </g>
+                  {isFigSelected && (
+                    <circle r={figR + 4} fill="none" stroke="#3D5A73" strokeWidth="2" />
+                  )}
+                </g>
+              );
+            })()}
 
-            const isSelected = comp.slotId === selectedSlotId;
-            const radius = pos.displayRadius;
-            // The displayRadius is the photo BOX size (3× bigger than the
-            // actual bead because of the bleed factor). Halo + selection ring
-            // must size to the VISIBLE bead, not the box, so they hug the
-            // bead instead of swallowing a huge area around it.
-            const coreR = radius / BRACELET_ZOOM;
+          <g>
+            {components.map((comp, i) => {
+              const pos = positions[i];
+              if (!pos) return null;
+              const isDragged = drag?.fromIdx === i && drag.active;
+              const x = isDragged ? dragRenderX : pos.x;
+              const y = isDragged ? dragRenderY : pos.y;
 
-            // Hit-area radius — sized to the VISIBLE bead, not the photo
-            // box. Adjacent beads have hit areas that don't overlap, so
-            // clicking on one selects exactly that one. The visual content
-            // (photo with its 3× bleed) is rendered with pointer-events
-            // disabled so it can't steal clicks from neighbours.
-            const hitR = coreR + 2;
+              const common = {
+                transform: `translate(${x}, ${y})`,
+                onPointerDown: (e: React.PointerEvent) => handlePointerDown(e, i),
+                onPointerUp: (e: React.PointerEvent) => handlePointerUp(e, i),
+                onPointerCancel: handlePointerCancel,
+                style: {
+                  cursor: onMove
+                    ? isDragged
+                      ? 'grabbing'
+                      : 'grab'
+                    : onSelect
+                      ? 'pointer'
+                      : 'default',
+                  transition: isDragged ? 'none' : 'transform 0.22s cubic-bezier(0.22, 1, 0.36, 1)',
+                } as React.CSSProperties,
+              };
 
-            if (comp.kind === 'bead') {
-              const bead = BEAD_BY_ID[comp.refId];
-              if (!bead) return null;
+              const isSelected = comp.slotId === selectedSlotId;
+              const radius = pos.displayRadius;
+              // The displayRadius is the photo BOX size (3× bigger than the
+              // actual bead because of the bleed factor). Halo + selection ring
+              // must size to the VISIBLE bead, not the box, so they hug the
+              // bead instead of swallowing a huge area around it.
+              const coreR = radius / BRACELET_ZOOM;
+
+              // Hit-area radius — sized to the VISIBLE bead, not the photo
+              // box. Adjacent beads have hit areas that don't overlap, so
+              // clicking on one selects exactly that one. The visual content
+              // (photo with its 3× bleed) is rendered with pointer-events
+              // disabled so it can't steal clicks from neighbours.
+              const hitR = coreR + 2;
+
+              if (comp.kind === 'bead') {
+                const bead = BEAD_BY_ID[comp.refId];
+                if (!bead) return null;
+                return (
+                  <g key={comp.slotId} {...common}>
+                    {/* Visual layer — decoration only, no hit. */}
+                    <g pointerEvents="none">
+                      {isSelected && !isDragged && (
+                        <circle r={coreR + 6} fill="#A8BED4" fillOpacity="0.45">
+                          <animate
+                            attributeName="r"
+                            values={`${coreR + 4};${coreR + 10};${coreR + 4}`}
+                            dur="1.6s"
+                            repeatCount="indefinite"
+                          />
+                          <animate
+                            attributeName="fill-opacity"
+                            values="0.55;0.15;0.55"
+                            dur="1.6s"
+                            repeatCount="indefinite"
+                          />
+                        </circle>
+                      )}
+                      {/* Rotate the bead photo so its drilled hole follows the tangent. */}
+                      <g
+                        filter={isSelected && !isDragged ? 'url(#mnb-glow)' : undefined}
+                        transform={`rotate(${pos.rot})`}
+                      >
+                        <BeadShape
+                          hex={bead.hex}
+                          veinHex={bead.veinHex}
+                          radius={radius}
+                          faceted={bead.shape === 'faceted'}
+                          shape={bead.shape}
+                          image={bead.images[0]}
+                        />
+                      </g>
+                      {isSelected && !isDragged && (
+                        <circle r={coreR + 2} fill="none" stroke="#3D5A73" strokeWidth="1.5" />
+                      )}
+                    </g>
+                    {/* Hit area — invisible circle matching the visible bead. */}
+                    <circle r={hitR} fill="transparent" />
+                  </g>
+                );
+              }
+
+              const charm = CHARM_BY_ID[comp.refId];
+              if (!charm) return null;
               return (
                 <g key={comp.slotId} {...common}>
-                  {/* Visual layer — decoration only, no hit. */}
                   <g pointerEvents="none">
                     {isSelected && !isDragged && (
                       <circle r={coreR + 6} fill="#A8BED4" fillOpacity="0.45">
@@ -878,72 +925,27 @@ export const BraceletPreview = forwardRef<BraceletPreviewHandle, Props>(function
                           dur="1.6s"
                           repeatCount="indefinite"
                         />
-                        <animate
-                          attributeName="fill-opacity"
-                          values="0.55;0.15;0.55"
-                          dur="1.6s"
-                          repeatCount="indefinite"
-                        />
                       </circle>
                     )}
-                    {/* Rotate the bead photo so its drilled hole follows the tangent. */}
-                    <g
-                      filter={isSelected && !isDragged ? 'url(#mnb-glow)' : undefined}
-                      transform={`rotate(${pos.rot})`}
-                    >
-                      <BeadShape
-                        hex={bead.hex}
-                        veinHex={bead.veinHex}
+                    <g filter={isSelected && !isDragged ? 'url(#mnb-glow)' : undefined}>
+                      <CharmShape
                         radius={radius}
-                        faceted={bead.shape === 'faceted'}
-                        shape={bead.shape}
-                        image={bead.images[0]}
+                        category={charm.category}
+                        material={charm.material}
+                        image={charm.images[0]}
                       />
                     </g>
                     {isSelected && !isDragged && (
                       <circle r={coreR + 2} fill="none" stroke="#3D5A73" strokeWidth="1.5" />
                     )}
                   </g>
-                  {/* Hit area — invisible circle matching the visible bead. */}
+                  {/* Hit area — invisible circle matching the visible charm. */}
                   <circle r={hitR} fill="transparent" />
                 </g>
               );
-            }
-
-            const charm = CHARM_BY_ID[comp.refId];
-            if (!charm) return null;
-            return (
-              <g key={comp.slotId} {...common}>
-                <g pointerEvents="none">
-                  {isSelected && !isDragged && (
-                    <circle r={coreR + 6} fill="#A8BED4" fillOpacity="0.45">
-                      <animate
-                        attributeName="r"
-                        values={`${coreR + 4};${coreR + 10};${coreR + 4}`}
-                        dur="1.6s"
-                        repeatCount="indefinite"
-                      />
-                    </circle>
-                  )}
-                  <g filter={isSelected && !isDragged ? 'url(#mnb-glow)' : undefined}>
-                    <CharmShape
-                      radius={radius}
-                      category={charm.category}
-                      material={charm.material}
-                      image={charm.images[0]}
-                    />
-                  </g>
-                  {isSelected && !isDragged && (
-                    <circle r={coreR + 2} fill="none" stroke="#3D5A73" strokeWidth="1.5" />
-                  )}
-                </g>
-                {/* Hit area — invisible circle matching the visible charm. */}
-                <circle r={hitR} fill="transparent" />
-              </g>
-            );
-          })}
-        </g>
-      </svg>
+            })}
+          </g>
+        </svg>
       </div>
       {isEmpty && (
         <div className="pointer-events-none absolute inset-x-0 top-2 flex justify-center">
@@ -956,15 +958,7 @@ export const BraceletPreview = forwardRef<BraceletPreviewHandle, Props>(function
   );
 });
 
-function Cord({
-  variant,
-  width,
-  height,
-}: {
-  variant: Variant;
-  width: number;
-  height: number;
-}) {
+function Cord({ variant, width, height }: { variant: Variant; width: number; height: number }) {
   if (variant === 'flat') {
     const y = height / 2;
     return (

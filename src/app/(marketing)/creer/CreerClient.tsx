@@ -1,9 +1,11 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
+import { useEffect, useRef } from 'react';
 import { useConfigurator } from '@/lib/store/configurator';
 import { AtelierSelectionScreen } from '@/components/configurator/AtelierSelectionScreen';
 import { Configurator } from '@/components/configurator/Configurator';
+import { decodeBraceletDesign } from '@/lib/utils/share-design';
 
 /**
  * Two-phase /creer flow :
@@ -12,7 +14,20 @@ import { Configurator } from '@/components/configurator/Configurator';
  */
 export function CreerClient() {
   const step = useConfigurator((s) => s.step);
+  const loadSharedDesign = useConfigurator((s) => s.loadSharedDesign);
+  const loadedSharedDesignRef = useRef(false);
   const isPhaseOne = step === 'atelier';
+
+  useEffect(() => {
+    if (loadedSharedDesignRef.current) return;
+    loadedSharedDesignRef.current = true;
+    const raw = new URLSearchParams(window.location.search).get('design');
+    if (!raw) return;
+    const design = decodeBraceletDesign(raw);
+    if (!design) return;
+    loadSharedDesign(design);
+    window.history.replaceState(null, '', window.location.pathname);
+  }, [loadSharedDesign]);
 
   return (
     <AnimatePresence mode="wait">

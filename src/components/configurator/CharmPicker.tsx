@@ -3,12 +3,7 @@
 import { useMemo, useState } from 'react';
 import { CHARMS } from '@/lib/mocks/charms';
 import { ATELIER_BY_ID } from '@/lib/mocks/ateliers';
-import {
-  useConfigurator,
-  totalLengthMm,
-  maxMmOf,
-  countCharms,
-} from '@/lib/store/configurator';
+import { useConfigurator, canFit, countCharms } from '@/lib/store/configurator';
 import { CharmGlyph } from '@/components/ui/CharmGlyph';
 import type { CharmCategory } from '@/types';
 import { haptic } from '@/lib/utils/feedback';
@@ -49,8 +44,7 @@ export function CharmPicker({ onTilePointerDown }: CharmPickerProps = {}) {
   const atelierCharms = useMemo(() => {
     const withPhoto = CHARMS.filter((c) => c.images.length > 0);
     if (!atelier) return withPhoto;
-    const wantedKind: 'charm' | 'figurine' =
-      atelier.id === 'atelier_kawaii' ? 'figurine' : 'charm';
+    const wantedKind: 'charm' | 'figurine' = atelier.id === 'atelier_kawaii' ? 'figurine' : 'charm';
     return withPhoto.filter(
       (c) => c.kind === wantedKind && atelier.allowedCharmCategories.includes(c.category),
     );
@@ -66,8 +60,6 @@ export function CharmPicker({ onTilePointerDown }: CharmPickerProps = {}) {
   const isKawaii = atelier?.id === 'atelier_kawaii';
   const charmsCount = isKawaii ? (figurine ? 1 : 0) : countCharms(components);
   const max = atelier?.maxCharms ?? 0;
-  const lengthMm = totalLengthMm(components);
-  const maxMm = maxMmOf(atelierId, sizeCm);
   // For Kawaii, picking a figurine REPLACES the current one — so no count limit.
   // For Classique, charms are appended on the cord and capped by maxCharms.
   const atCountLimit = !isKawaii && charmsCount >= max;
@@ -75,9 +67,7 @@ export function CharmPicker({ onTilePointerDown }: CharmPickerProps = {}) {
   if (!atelier?.allowCharms) {
     return (
       <div className="text-center py-8">
-        <p className="text-[14px] text-[#718096] italic">
-          Cet atelier ne comprend pas de charms.
-        </p>
+        <p className="text-[14px] text-[#718096] italic">Cet atelier ne comprend pas de charms.</p>
       </div>
     );
   }
@@ -138,61 +128,61 @@ export function CharmPicker({ onTilePointerDown }: CharmPickerProps = {}) {
             </p>
           </div>
         ) : (
-        <div className="grid grid-cols-3 gap-2 md:gap-3">
-          {filtered.map((charm) => {
-            // For Kawaii figurines : no length budget (figurine is off-cord),
-            // no count limit either (clicking just replaces the current one).
-            const fits = isKawaii ? true : lengthMm + charm.sizeMm <= maxMm + 0.0001;
-            const disabled = atCountLimit || !fits;
-            const isSelected = isKawaii && figurine?.refId === charm.id;
-            return (
-            <button
-              key={charm.id}
-              type="button"
-              disabled={disabled}
-              onPointerDown={(e) => {
-                // Drag-from-palette only makes sense for cord items (Classique).
-                // The Kawaii figurine doesn't sit on the cord, so we fall back
-                // to click-to-attach.
-                if (disabled || isKawaii) return;
-                onTilePointerDown?.(charm.id, e);
-              }}
-              onClick={() => {
-                if (disabled) return;
-                if (isKawaii) {
-                  // Click-to-toggle : same figurine clicked again removes it.
-                  setFigurine(isSelected ? null : charm.id);
-                } else {
-                  addCharm(charm.id);
-                }
-                haptic(8);
-              }}
-              className={cn(
-                'group relative aspect-square flex flex-col items-center justify-center gap-1.5 p-2 md:p-3 rounded-xl md:rounded-2xl border active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-transparent disabled:hover:bg-[#F5F0E8] disabled:hover:shadow-none touch-none select-none',
-                isSelected
-                  ? 'bg-white border-[#3D5A73] shadow-md cursor-pointer'
-                  : 'bg-[#F5F0E8] border-transparent hover:border-[#3D5A73] hover:bg-white hover:shadow-md',
-                isKawaii ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing',
-              )}
-              aria-label={isSelected ? `Retirer ${charm.name}` : `Choisir ${charm.name}`}
-            >
-              <div className="transition-transform duration-300 group-hover:scale-110 h-14 w-14 flex items-center justify-center">
-                <CharmGlyph
-                  category={charm.category}
-                  material={charm.material}
-                  size={48}
-                  image={charm.images[0]}
-                />
-              </div>
-              <div className="text-center min-w-0 w-full">
-                <p className="text-[10px] md:text-[11px] font-black uppercase tracking-tight text-[#2D3748] truncate leading-tight">
-                  {charm.name}
-                </p>
-              </div>
-            </button>
-            );
-          })}
-        </div>
+          <div className="grid grid-cols-3 gap-2 md:gap-3">
+            {filtered.map((charm) => {
+              // For Kawaii figurines : no length budget (figurine is off-cord),
+              // no count limit either (clicking just replaces the current one).
+              const fits = isKawaii ? true : canFit(atelierId, sizeCm, components, charm.sizeMm);
+              const disabled = atCountLimit || !fits;
+              const isSelected = isKawaii && figurine?.refId === charm.id;
+              return (
+                <button
+                  key={charm.id}
+                  type="button"
+                  disabled={disabled}
+                  onPointerDown={(e) => {
+                    // Drag-from-palette only makes sense for cord items (Classique).
+                    // The Kawaii figurine doesn't sit on the cord, so we fall back
+                    // to click-to-attach.
+                    if (disabled || isKawaii) return;
+                    onTilePointerDown?.(charm.id, e);
+                  }}
+                  onClick={() => {
+                    if (disabled) return;
+                    if (isKawaii) {
+                      // Click-to-toggle : same figurine clicked again removes it.
+                      setFigurine(isSelected ? null : charm.id);
+                    } else {
+                      addCharm(charm.id);
+                    }
+                    haptic(8);
+                  }}
+                  className={cn(
+                    'group relative aspect-square flex flex-col items-center justify-center gap-1.5 p-2 md:p-3 rounded-xl md:rounded-2xl border active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-transparent disabled:hover:bg-[#F5F0E8] disabled:hover:shadow-none touch-none select-none',
+                    isSelected
+                      ? 'bg-white border-[#3D5A73] shadow-md cursor-pointer'
+                      : 'bg-[#F5F0E8] border-transparent hover:border-[#3D5A73] hover:bg-white hover:shadow-md',
+                    isKawaii ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing',
+                  )}
+                  aria-label={isSelected ? `Retirer ${charm.name}` : `Choisir ${charm.name}`}
+                >
+                  <div className="transition-transform duration-300 group-hover:scale-110 h-14 w-14 flex items-center justify-center">
+                    <CharmGlyph
+                      category={charm.category}
+                      material={charm.material}
+                      size={48}
+                      image={charm.images[0]}
+                    />
+                  </div>
+                  <div className="text-center min-w-0 w-full">
+                    <p className="text-[10px] md:text-[11px] font-black uppercase tracking-tight text-[#2D3748] truncate leading-tight">
+                      {charm.name}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         )}
       </div>
     </div>

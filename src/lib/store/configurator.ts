@@ -10,6 +10,28 @@ import { uid } from '@/lib/utils/format';
 import { inspire, type Mood } from '@/lib/harmony/rules';
 
 export type ConfiguratorStep = 'atelier' | 'beads' | 'charms';
+export type SizeFitStatus = 'empty' | 'too-short' | 'ready' | 'too-long';
+
+export interface SizeFit {
+  status: SizeFitStatus;
+  lengthMm: number;
+  targetMm: number;
+  minMm: number;
+  maxMm: number;
+  remainingMm: number;
+  overflowMm: number;
+  deltaMm: number;
+}
+
+export interface SharedBraceletDesign {
+  atelierId: string;
+  sizeCm: number;
+  sizeLabel: SizeLabel;
+  components: BraceletComponent[];
+  figurine?: BraceletComponent | null;
+  title?: string;
+  intention?: string;
+}
 
 interface ConfiguratorState {
   atelierId: string;
@@ -35,6 +57,8 @@ interface ConfiguratorState {
   step: ConfiguratorStep;
   selectedComponent: string | null;
   savedDesigns: BraceletConfig[];
+  draftTitle: string;
+  draftIntention: string;
 
   setAtelier: (atelierId: string) => void;
   /** Pick a preset label. The cm + label snap together. */
@@ -64,16 +88,18 @@ interface ConfiguratorState {
   clearComponents: () => void;
   select: (slotId: string | null) => void;
   setStep: (step: ConfiguratorStep) => void;
+  setDraftMeta: (title?: string, intention?: string) => void;
   applyInspired: (mood?: Mood) => Mood;
   reset: () => void;
-  save: (title: string) => BraceletConfig;
+  save: (title: string, intention?: string) => BraceletConfig;
+  loadSharedDesign: (design: SharedBraceletDesign) => void;
   loadDesign: (id: string) => void;
   deleteDesign: (id: string) => void;
 }
 
-const DEFAULT_ATELIER =
-  ATELIERS.find((a) => a.id === 'atelier_classique')?.id ?? ATELIERS[0]!.id;
+const DEFAULT_ATELIER = ATELIERS.find((a) => a.id === 'atelier_classique')?.id ?? ATELIERS[0]!.id;
 const DEFAULT_SIZE: SizeLabel = 'M';
+export const USER_PICK_FIT_TOLERANCE_MM = 3;
 
 /* ────────────────────────────────────────────────────────────────
    Length & budget helpers
@@ -131,6 +157,51 @@ export function maxMmOf(atelierId: string, sizeCm: number): number {
   return Math.round(sizeCm * 10) + atelier.slackMm;
 }
 
+export function minAllowedMmOf(atelierId: string, sizeCm: number): number {
+  const atelier = ATELIER_BY_ID[atelierId];
+  if (!atelier) return 170 - USER_PICK_FIT_TOLERANCE_MM;
+  if (atelier.sizing.mode === 'fixed-range') return atelier.sizing.minMm;
+  return Math.max(0, Math.round(sizeCm * 10) - USER_PICK_FIT_TOLERANCE_MM);
+}
+
+export function maxAllowedMmOf(atelierId: string, sizeCm: number): number {
+  const atelier = ATELIER_BY_ID[atelierId];
+  if (!atelier) return 170 + USER_PICK_FIT_TOLERANCE_MM;
+  if (atelier.sizing.mode === 'fixed-range') return atelier.sizing.maxMm + atelier.slackMm;
+  return Math.round(sizeCm * 10) + atelier.slackMm + USER_PICK_FIT_TOLERANCE_MM;
+}
+
+export function getSizeFit(
+  atelierId: string,
+  sizeCm: number,
+  components: BraceletComponent[],
+): SizeFit {
+  const lengthMm = totalLengthMm(components);
+  const target = targetMm(atelierId, sizeCm);
+  const min = minAllowedMmOf(atelierId, sizeCm);
+  const max = maxAllowedMmOf(atelierId, sizeCm);
+  const epsilon = 0.0001;
+  const status: SizeFitStatus =
+    components.length === 0
+      ? 'empty'
+      : lengthMm < min - epsilon
+        ? 'too-short'
+        : lengthMm > max + epsilon
+          ? 'too-long'
+          : 'ready';
+
+  return {
+    status,
+    lengthMm,
+    targetMm: target,
+    minMm: min,
+    maxMm: max,
+    remainingMm: Math.max(0, min - lengthMm),
+    overflowMm: Math.max(0, lengthMm - max),
+    deltaMm: lengthMm - target,
+  };
+}
+
 /** Can we still fit `addedMm` more on the bracelet ? */
 export function canFit(
   atelierId: string,
@@ -138,7 +209,7 @@ export function canFit(
   components: BraceletComponent[],
   addedMm: number,
 ): boolean {
-  const limit = maxMmOf(atelierId, sizeCm);
+  const limit = maxAllowedMmOf(atelierId, sizeCm);
   return totalLengthMm(components) + addedMm <= limit + 0.0001;
 }
 
@@ -226,6 +297,8 @@ export const useConfigurator = create<ConfiguratorState>()(
       step: 'atelier',
       selectedComponent: null,
       savedDesigns: [],
+      draftTitle: '',
+      draftIntention: '',
 
       setAtelier: (atelierId) => {
         const next = ATELIER_BY_ID[atelierId];
@@ -240,6 +313,8 @@ export const useConfigurator = create<ConfiguratorState>()(
           sizeCm: nextSizeCm,
           sizeLabel: deriveSizeLabel(atelierId, nextSizeCm),
           selectedComponent: null,
+          draftTitle: '',
+          draftIntention: '',
         });
       },
 
@@ -343,8 +418,7 @@ export const useConfigurator = create<ConfiguratorState>()(
           const next = state.components.filter((_, i) => i !== idx);
           return {
             components: next,
-            selectedComponent:
-              state.selectedComponent === slotId ? null : state.selectedComponent,
+            selectedComponent: state.selectedComponent === slotId ? null : state.selectedComponent,
           };
         }),
 
@@ -369,12 +443,19 @@ export const useConfigurator = create<ConfiguratorState>()(
 
       setStep: (step) => set({ step }),
 
+      setDraftMeta: (title, intention) =>
+        set({
+          draftTitle: title ?? '',
+          draftIntention: intention ?? '',
+        }),
+
       applyInspired: (mood) => {
         const state = get();
         const atelier = ATELIER_BY_ID[state.atelierId];
         const result = inspire(mood, {
           targetMm: targetMm(state.atelierId, state.sizeCm),
-          minMm: minMmOf(state.atelierId, state.sizeCm),
+          minMm: minAllowedMmOf(state.atelierId, state.sizeCm),
+          maxMm: maxAllowedMmOf(state.atelierId, state.sizeCm),
           allowedBeadFamilies: atelier?.allowedBeadFamilies,
           allowedCharmCategories: atelier?.allowedCharmCategories,
           allowCharms: atelier?.allowCharms ?? true,
@@ -398,9 +479,11 @@ export const useConfigurator = create<ConfiguratorState>()(
           figurine: null,
           step: 'atelier',
           selectedComponent: null,
+          draftTitle: '',
+          draftIntention: '',
         }),
 
-      save: (title) => {
+      save: (title, intention) => {
         const state = get();
         const design: BraceletConfig = {
           id: uid('design'),
@@ -412,11 +495,55 @@ export const useConfigurator = create<ConfiguratorState>()(
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           title,
+          intention,
           price: priceOf(state.atelierId, state.sizeLabel, state.components, state.figurine),
         };
         set({ savedDesigns: [design, ...state.savedDesigns].slice(0, 24) });
         return design;
       },
+
+      loadSharedDesign: (design) =>
+        set(() => {
+          const atelier = ATELIER_BY_ID[design.atelierId];
+          const atelierId = atelier?.id ?? DEFAULT_ATELIER;
+          const sizeCm =
+            atelier?.sizing.mode === 'fixed-range'
+              ? sizeCmOf(atelierId, 'M')
+              : typeof design.sizeCm === 'number' && Number.isFinite(design.sizeCm)
+                ? clampCm(design.sizeCm)
+                : sizeCmOf(atelierId, design.sizeLabel);
+          const components = design.components
+            .filter((component) =>
+              component.kind === 'bead'
+                ? Boolean(BEAD_BY_ID[component.refId])
+                : Boolean(CHARM_BY_ID[component.refId]),
+            )
+            .map((component) => ({
+              slotId: uid('s'),
+              kind: component.kind,
+              refId: component.refId,
+            }));
+          const nextFigurine =
+            design.figurine && CHARM_BY_ID[design.figurine.refId]
+              ? {
+                  slotId: uid('s'),
+                  kind: 'charm' as const,
+                  refId: design.figurine.refId,
+                }
+              : null;
+
+          return {
+            atelierId,
+            sizeCm,
+            sizeLabel: deriveSizeLabel(atelierId, sizeCm),
+            components,
+            figurine: nextFigurine,
+            selectedComponent: null,
+            step: 'beads',
+            draftTitle: design.title ?? '',
+            draftIntention: design.intention ?? '',
+          };
+        }),
 
       loadDesign: (id) => {
         const design = get().savedDesigns.find((d) => d.id === id);
@@ -429,6 +556,8 @@ export const useConfigurator = create<ConfiguratorState>()(
           figurine: design.figurine ?? null,
           selectedComponent: null,
           step: 'beads',
+          draftTitle: design.title ?? '',
+          draftIntention: design.intention ?? '',
         });
       },
 
@@ -445,7 +574,11 @@ export function useConfiguratorPrice() {
   return useConfigurator((s) => priceOf(s.atelierId, s.sizeLabel, s.components, s.figurine));
 }
 
-export function snapshotConfig(state: ConfiguratorState, title?: string): BraceletConfig {
+export function snapshotConfig(
+  state: ConfiguratorState,
+  title?: string,
+  intention?: string,
+): BraceletConfig {
   const now = new Date().toISOString();
   return {
     id: uid('design'),
@@ -457,6 +590,7 @@ export function snapshotConfig(state: ConfiguratorState, title?: string): Bracel
     createdAt: now,
     updatedAt: now,
     title,
+    intention,
     price: priceOf(state.atelierId, state.sizeLabel, state.components, state.figurine),
   };
 }
@@ -484,5 +618,5 @@ export function isComplete(
   sizeCm: number,
   components: BraceletComponent[],
 ): boolean {
-  return totalLengthMm(components) >= minMmOf(atelierId, sizeCm) - 0.0001;
+  return getSizeFit(atelierId, sizeCm, components).status === 'ready';
 }

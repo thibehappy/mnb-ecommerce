@@ -5,11 +5,11 @@ import './globals.css';
 export const metadata: Metadata = {
   metadataBase: new URL('https://mynicebracelet.com'),
   title: {
-    default: 'My Nice Bracelet — Bijoux personnalisés, faits à Paris',
+    default: 'My Nice Bracelet — Bijoux personnalisés, assemblés à Paris',
     template: '%s — My Nice Bracelet',
   },
   description:
-    'Composez votre bracelet avec nos pierres, charms et figurines. Kits à créer chez soi ou bracelets personnalisés en ligne. Boutique Paris.',
+    'Composez votre bracelet avec nos pierres, charms et figurines. Créé en ligne ou en boutique, assemblé à Paris par nos soins.',
   openGraph: {
     type: 'website',
     locale: 'fr_FR',

@@ -4,7 +4,7 @@ import { CreerClient } from './CreerClient';
 export const metadata: Metadata = {
   title: 'Créer mon bracelet',
   description:
-    'Configurateur en ligne : choisissez un atelier, une taille, composez vos perles et charms. Assemblé à Paris.',
+    'Le Studio My Nice Bracelet : composez vos perles et charms, puis choisissez une pièce assemblée à Paris ou un kit DIY.',
 };
 
 export default function CreerPage() {

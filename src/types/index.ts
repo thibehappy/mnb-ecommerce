@@ -249,6 +249,8 @@ export interface BraceletComponent {
   refId: UUID;
 }
 
+export type FulfillmentMode = 'assembled-paris' | 'diy-kit';
+
 export interface BraceletConfig {
   id: UUID;
   /** The chosen atelier (recipe) */
@@ -271,6 +273,8 @@ export interface BraceletConfig {
   title?: string;
   /** Short intention printed/attached to the handmade order when available. */
   intention?: string;
+  /** Chosen at the final step: handmade assembly in Paris or home DIY kit. */
+  fulfillmentMode?: FulfillmentMode;
   /** Fixed price from atelier.sizes — single source of truth */
   price: Euros;
 }

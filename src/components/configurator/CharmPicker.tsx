@@ -144,7 +144,7 @@ export function CharmPicker({ onTilePointerDown }: CharmPickerProps = {}) {
                     // Drag-from-palette only makes sense for cord items (Classique).
                     // The Kawaii figurine doesn't sit on the cord, so we fall back
                     // to click-to-attach.
-                    if (disabled || isKawaii) return;
+                    if (disabled || isKawaii || e.pointerType === 'touch') return;
                     onTilePointerDown?.(charm.id, e);
                   }}
                   onClick={() => {
@@ -162,7 +162,9 @@ export function CharmPicker({ onTilePointerDown }: CharmPickerProps = {}) {
                     isSelected
                       ? 'bg-white border-[#3D5A73] shadow-md cursor-pointer'
                       : 'bg-[#F5F0E8] border-transparent hover:border-[#3D5A73] hover:bg-white hover:shadow-md',
-                    isKawaii ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing',
+                    isKawaii
+                      ? 'cursor-pointer'
+                      : 'touch-manipulation md:cursor-grab md:active:cursor-grabbing',
                   )}
                   aria-label={isSelected ? `Retirer ${charm.name}` : `Choisir ${charm.name}`}
                 >

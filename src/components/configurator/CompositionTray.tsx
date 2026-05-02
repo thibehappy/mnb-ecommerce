@@ -33,7 +33,7 @@ export function CompositionTray({
       <div className="mb-3 flex items-center justify-between gap-3">
         <div className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#3D5A73]">
           <GripHorizontal size={14} strokeWidth={2.2} />
-          Ordre du fil
+          Ma composition
         </div>
         <span className="rounded-full bg-[#F5F0E8] px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-[#718096]">
           {totalPieces} pièce{totalPieces > 1 ? 's' : ''}

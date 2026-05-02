@@ -1,5 +1,5 @@
 const ITEMS = [
-  'Fait à Paris',
+  'Assemblé à Paris',
   'Pierres semi-précieuses',
   'Kits à créer chez soi',
   'Personnalisé',

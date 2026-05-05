@@ -16,7 +16,7 @@ import { ATELIER_BY_ID, ATELIERS } from '@/lib/mocks/ateliers';
 import { uid } from '@/lib/utils/format';
 import { inspire, type Mood } from '@/lib/harmony/rules';
 
-export type ConfiguratorStep = 'atelier' | 'beads' | 'charms';
+export type ConfiguratorStep = 'atelier' | 'beads' | 'stones' | 'charms';
 export type SizeFitStatus = 'empty' | 'too-short' | 'ready' | 'too-long';
 
 export interface SizeFit {

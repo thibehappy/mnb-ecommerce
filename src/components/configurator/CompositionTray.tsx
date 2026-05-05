@@ -8,6 +8,9 @@ import { CharmGlyph } from '@/components/ui/CharmGlyph';
 import { beadPhotoZoom } from '@/lib/utils/bead-display';
 import { cn } from '@/lib/utils/cn';
 import { resolveBead, resolveCharm, sizeMmOf } from '@/lib/store/configurator';
+import { useT } from '@/lib/i18n/use-t';
+import { formatBeadSize } from '@/lib/utils/format';
+import type { Lang } from '@/lib/i18n/store';
 
 interface CompositionTrayProps {
   components: BraceletComponent[];
@@ -27,16 +30,17 @@ export function CompositionTray({
   onRemove,
 }: CompositionTrayProps) {
   const totalPieces = components.length + (figurine ? 1 : 0);
+  const { t, lang } = useT();
 
   return (
     <section className="mt-4 rounded-2xl border border-[#EEE9E0] bg-white p-4 shadow-sm md:p-5">
       <div className="mb-3 flex items-center justify-between gap-3">
         <div className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#3D5A73]">
           <GripHorizontal size={14} strokeWidth={2.2} />
-          Ma composition
+          {t('composition.title')}
         </div>
         <span className="rounded-full bg-[#F5F0E8] px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-[#718096]">
-          {totalPieces} pièce{totalPieces > 1 ? 's' : ''}
+          {t(totalPieces > 1 ? 'composition.piecesPlural' : 'composition.piecesSingular', totalPieces)}
         </span>
       </div>
 
@@ -45,14 +49,14 @@ export function CompositionTray({
           <div>
             <Sparkles className="mx-auto mb-2 text-[#A8BED4]" size={18} strokeWidth={2} />
             <p className="text-[12px] font-semibold italic text-[#718096]">
-              Le fil attend sa première perle.
+              {t('composition.empty')}
             </p>
           </div>
         </div>
       ) : (
         <div className="flex gap-2 overflow-x-auto pb-1">
           {components.map((component, index) => {
-            const item = componentInfo(component);
+            const item = componentInfo(component, t, lang);
             if (!item) return null;
             const active = selectedSlotId === component.slotId;
 
@@ -96,21 +100,21 @@ export function CompositionTray({
 
                 <div className="mt-3 grid grid-cols-3 gap-1.5">
                   <IconButton
-                    label="Déplacer vers la gauche"
+                    label={t('composition.moveLeft')}
                     disabled={index === 0}
                     onClick={() => onMove(index, index - 1)}
                   >
                     <ArrowLeft size={12} strokeWidth={2.3} />
                   </IconButton>
                   <IconButton
-                    label="Retirer"
+                    label={t('composition.remove')}
                     danger
                     onClick={() => onRemove(component.slotId)}
                   >
                     <Trash2 size={12} strokeWidth={2.2} />
                   </IconButton>
                   <IconButton
-                    label="Déplacer vers la droite"
+                    label={t('composition.moveRight')}
                     disabled={index === components.length - 1}
                     onClick={() => onMove(index, index + 1)}
                   >
@@ -147,6 +151,7 @@ function FigurineCard({
   onRemove: (slotId: string) => void;
 }) {
   const charm = resolveCharm(figurine.refId);
+  const { t } = useT();
   if (!charm) return null;
   const active = selectedSlotId === figurine.slotId;
 
@@ -164,10 +169,10 @@ function FigurineCard({
       >
         <div className="mb-2 flex items-start justify-between gap-2">
           <span className="inline-flex h-6 items-center rounded-full bg-white px-2 text-[9px] font-black uppercase tracking-widest text-[#3D5A73] shadow-sm">
-            Side
+            {t('composition.side')}
           </span>
           <span className="text-[9px] font-black uppercase tracking-widest text-[#A8BED4]">
-            Hors fil
+            {t('composition.offCord')}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -182,7 +187,7 @@ function FigurineCard({
               {charm.name}
             </p>
             <p className="text-[9px] font-black uppercase tracking-widest text-[#A8BED4]">
-              Figurine
+              {t('composition.figurine')}
             </p>
           </div>
         </div>
@@ -197,21 +202,36 @@ function FigurineCard({
           className="inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-lg bg-[#FFF1EE] text-[9px] font-black uppercase tracking-widest text-[#A4473E] transition-colors hover:bg-[#F8DCD5]"
         >
           <Trash2 size={12} strokeWidth={2.2} />
-          Retirer
+          {t('composition.remove')}
         </button>
       </div>
     </div>
   );
 }
 
-function componentInfo(component: BraceletComponent) {
+function componentInfo(
+  component: BraceletComponent,
+  t: (key: string, ...params: (string | number)[]) => string,
+  lang: Lang,
+) {
   if (component.kind === 'bead') {
     const bead = resolveBead(component.refId);
     if (!bead) return null;
+    // Specific shape labels for the four enamel forms; everything else
+    // (round, faceted, rondelle, nugget, tube, cube, flower) collapses to
+    // the generic "Perle" / "Bead" label.
+    const kindKey =
+      bead.shape === 'bow'
+        ? 'shape.bow'
+        : bead.shape === 'star'
+          ? 'shape.star'
+          : bead.shape === 'heart'
+            ? 'shape.heart'
+            : 'composition.bead';
     return {
       name: bead.name,
-      meta: formatMm(sizeMmOf(component)),
-      kindLabel: bead.shape === 'bow' ? 'Nœud' : bead.shape === 'star' ? 'Étoile' : bead.shape === 'heart' ? 'Cœur' : 'Perle',
+      meta: formatBeadSize(sizeMmOf(component), lang),
+      kindLabel: t(kindKey),
       preview: (
         <StoneSwatch
           hex={bead.hex}
@@ -228,8 +248,8 @@ function componentInfo(component: BraceletComponent) {
   if (!charm) return null;
   return {
     name: charm.name,
-    meta: formatMm(sizeMmOf(component)),
-    kindLabel: 'Charm',
+    meta: formatBeadSize(sizeMmOf(component), lang),
+    kindLabel: t('composition.charm'),
     preview: (
       <CharmGlyph
         category={charm.category}
@@ -239,10 +259,6 @@ function componentInfo(component: BraceletComponent) {
       />
     ),
   };
-}
-
-function formatMm(mm: number): string {
-  return `${mm.toString().replace('.', ',')} mm`;
 }
 
 function IconButton({

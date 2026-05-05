@@ -8,7 +8,7 @@ import { ATELIERS, ATELIER_BY_ID } from '@/lib/mocks/ateliers';
 import { useConfigurator } from '@/lib/store/configurator';
 import { useGiftCards } from '@/lib/store/gift-cards';
 import { useT } from '@/lib/i18n/use-t';
-import { formatPrice } from '@/lib/utils/format';
+import { formatCmFromMm, formatCm, formatPrice } from '@/lib/utils/format';
 import { cn } from '@/lib/utils/cn';
 import { haptic } from '@/lib/utils/feedback';
 import { GiftRedemptionModal } from '@/components/gifts/GiftRedemptionModal';
@@ -21,7 +21,7 @@ import { GiftRedemptionModal } from '@/components/gifts/GiftRedemptionModal';
 export function AtelierSelectionScreen() {
   const setAtelier = useConfigurator((s) => s.setAtelier);
   const setStep = useConfigurator((s) => s.setStep);
-  const { t } = useT();
+  const { t, lang } = useT();
   const loadSharedDesign = useConfigurator((s) => s.loadSharedDesign);
   const getByCode = useGiftCards((s) => s.getByCode);
   const markViewed = useGiftCards((s) => s.markViewed);
@@ -149,18 +149,23 @@ export function AtelierSelectionScreen() {
                     <Spec
                       label={
                         a.sizing.mode === 'fixed-range'
-                          ? `${(a.sizing.minMm / 10).toFixed(0)}–${(a.sizing.maxMm / 10).toFixed(0)} cm`
+                          ? `${formatCmFromMm(a.sizing.minMm, lang).replace(/\s.*/, '')}–${formatCmFromMm(a.sizing.maxMm, lang)}`
                           : a.sizes.length > 0
-                            ? `${a.sizes[0]!.cm}–${a.sizes[a.sizes.length - 1]!.cm} cm`
-                            : 'Taille libre'
+                            ? `${formatCm(a.sizes[0]!.cm, lang).replace(/\s.*/, '')}–${formatCm(a.sizes[a.sizes.length - 1]!.cm, lang)}`
+                            : t('atelierSelect.freeSize')
                       }
                     />
                     {a.maxCharms > 0 && (
                       <Spec
                         label={
                           a.id === 'atelier_kawaii'
-                            ? `+ ${a.maxCharms} figurine`
-                            : `+ ${a.maxCharms} charm${a.maxCharms > 1 ? 's' : ''}`
+                            ? t('atelierSelect.figurineSpec', a.maxCharms)
+                            : t(
+                                a.maxCharms > 1
+                                  ? 'atelierSelect.charmSpec.plural'
+                                  : 'atelierSelect.charmSpec.singular',
+                                a.maxCharms,
+                              )
                         }
                       />
                     )}

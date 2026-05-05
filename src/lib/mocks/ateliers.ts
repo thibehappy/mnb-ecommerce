@@ -1,5 +1,31 @@
 import type { Atelier, StoneFamily, CharmCategory } from '@/types';
 
+/**
+ * Semi-precious stone families — used to split the Classique atelier
+ * picker into two tabs : "Perles" (pearl + enamel) and "Pierres"
+ * (everything in this list).
+ */
+export const STONE_FAMILIES: StoneFamily[] = [
+  'amethyst',
+  'turquoise',
+  'rose-quartz',
+  'lapis',
+  'onyx',
+  'jade',
+  'amber',
+  'citrine',
+  'obsidian',
+  'carnelian',
+  'moonstone',
+  'garnet',
+];
+
+/**
+ * Non-stone bead families — pearls and enamel shapes (hearts, stars,
+ * flowers, bows). Counterpart to `STONE_FAMILIES`.
+ */
+export const NON_STONE_FAMILIES: StoneFamily[] = ['pearl', 'enamel'];
+
 /** Full catalogue of stone families (all semi-precious + pearls + enamel shapes). */
 const STANDARD_BEAD_FAMILIES: StoneFamily[] = [
   'amethyst',
@@ -131,7 +157,7 @@ export const ATELIERS: Atelier[] = [
     allowedBeadFamilies: STANDARD_BEAD_FAMILIES,
     allowedCharmCategories: CLASSIQUE_CHARMS,
     allowCharms: true,
-    maxCharms: 2,
+    maxCharms: 3,
     slackMm: 0,
     price: 36,
     sizes: PICK_SIZES,

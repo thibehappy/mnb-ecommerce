@@ -6,7 +6,7 @@ import { KIT_BY_ID } from '@/lib/mocks/kits';
 import { useCart, subtotalForLine } from '@/lib/store/cart';
 import { targetMm as targetMmOf } from '@/lib/store/configurator';
 import { useT } from '@/lib/i18n/use-t';
-import { formatPrice } from '@/lib/utils/format';
+import { formatCm, formatPrice } from '@/lib/utils/format';
 import { QuantityStepper } from '@/components/ui/QuantityStepper';
 import { KitVisual } from '@/components/ui/KitVisual';
 import { BraceletPreview } from '@/components/configurator/BraceletPreview';
@@ -14,7 +14,7 @@ import { BraceletPreview } from '@/components/configurator/BraceletPreview';
 export function CartLineItem({ line }: { line: CartLine }) {
   const { updateQuantity, remove } = useCart();
   const lineTotal = subtotalForLine(line);
-  const { t } = useT();
+  const { t, lang } = useT();
 
   if (line.kind === 'kit') {
     const kit = KIT_BY_ID[line.kitId];
@@ -71,7 +71,7 @@ export function CartLineItem({ line }: { line: CartLine }) {
         <p className="text-eyebrow text-[var(--color-muted)]">{t('cartLine.creation')}</p>
         <p className="font-serif text-[17px] truncate">{line.config.title ?? t('cartLine.titleFallback')}</p>
         <p className="text-[12px] text-[var(--color-graphite)]">
-          {line.config.components.length} {t('cartLine.elements')} · {t('cartLine.size')} {line.config.sizeCm}cm · {fulfillment}
+          {line.config.components.length} {t('cartLine.elements')} · {t('cartLine.size')} {formatCm(line.config.sizeCm, lang)} · {fulfillment}
         </p>
         <div className="flex items-center justify-between mt-auto">
           <QuantityStepper

@@ -34,7 +34,7 @@ import {
 } from '@/lib/store/configurator';
 import type { FulfillmentMode } from '@/types';
 import { useCart } from '@/lib/store/cart';
-import { ATELIER_BY_ID, ATELIERS } from '@/lib/mocks/ateliers';
+import { ATELIER_BY_ID, ATELIERS, NON_STONE_FAMILIES, STONE_FAMILIES } from '@/lib/mocks/ateliers';
 import { BraceletPreview, type BraceletPreviewHandle } from './BraceletPreview';
 import { BeadPicker } from './BeadPicker';
 import { CharmPicker } from './CharmPicker';
@@ -45,7 +45,13 @@ import { CompositionTray } from './CompositionTray';
 import { StoneSwatch } from '@/components/ui/StoneSwatch';
 import { CharmGlyph } from '@/components/ui/CharmGlyph';
 import { beadPhotoZoom } from '@/lib/utils/bead-display';
-import { formatCmFromMm, formatPrice } from '@/lib/utils/format';
+import {
+  formatBeadSize,
+  formatCm,
+  formatCmFromMm,
+  formatLengthRangeCompact,
+  formatPrice,
+} from '@/lib/utils/format';
 import { cn } from '@/lib/utils/cn';
 import { atelierSound, haptic, successMoment } from '@/lib/utils/feedback';
 import { encodeBraceletDesign } from '@/lib/utils/share-design';
@@ -53,7 +59,7 @@ import { useGiftCards } from '@/lib/store/gift-cards';
 import { GiftModal } from '@/components/gifts/GiftModal';
 import { useT } from '@/lib/i18n/use-t';
 
-const TAB_IDS = ['beads', 'charms'] as const;
+const TAB_IDS = ['beads', 'stones', 'charms'] as const;
 type TabId = (typeof TAB_IDS)[number];
 
 interface PaletteDrag {
@@ -119,7 +125,7 @@ export function Configurator() {
   const updateDesignedGift = useGiftCards((s) => s.updateDesignedGift);
   const markGiftRedeemed = useGiftCards((s) => s.markRedeemed);
   const endRedemption = useGiftCards((s) => s.endRedemption);
-  const { t } = useT();
+  const { t, lang } = useT();
 
   // Fulfillment mode chosen at order time : DIY kit (default — pieces
   // packaged separately to assemble at home) or assembled in our Paris
@@ -180,7 +186,15 @@ export function Configurator() {
 
   // Active tab : if user is on 'atelier' (shouldn't happen here), default to 'beads'.
   // Also force 'beads' when the atelier doesn't allow charms (Bracelet Bar).
-  const tab = step === 'charms' && atelier?.allowCharms ? 'charms' : 'beads';
+  // Stones tab is Classique-only; Charms tab requires atelier.allowCharms.
+  // Anything else collapses back to "beads" (the always-available tab).
+  const isClassique = atelier?.id === 'atelier_classique';
+  const tab: TabId =
+    step === 'charms' && atelier?.allowCharms
+      ? 'charms'
+      : step === 'stones' && isClassique
+        ? 'stones'
+        : 'beads';
 
   const beadsCount = countBeads(components);
   const charmsCount = countCharms(components);
@@ -192,10 +206,10 @@ export function Configurator() {
     fit.status === 'empty'
       ? t('fit.empty')
       : fit.status === 'ready'
-        ? `${t('fit.ready')} · ${formatCmFromMm(lengthMm)}`
+        ? `${t('fit.ready')} · ${formatCmFromMm(lengthMm, lang)}`
         : fit.status === 'too-long'
-          ? `${t('fit.tooLong')} ${formatCmFromMm(fit.overflowMm)} · ${t('fit.tooLongSuffix')}`
-          : `${t('fit.tooShort')} ${formatCmFromMm(fit.remainingMm)} ${t('fit.tooShortSuffix')}`;
+          ? `${t('fit.tooLong')} ${formatCmFromMm(fit.overflowMm, lang)} · ${t('fit.tooLongSuffix')}`
+          : `${t('fit.tooShort')} ${formatCmFromMm(fit.remainingMm, lang)} ${t('fit.tooShortSuffix')}`;
 
   // Listen to global pointer events while dragging from palette
   useEffect(() => {
@@ -473,7 +487,7 @@ export function Configurator() {
                               active ? 'opacity-80' : 'opacity-60',
                             )}
                           >
-                            {sz.cm}cm
+                            {formatCm(sz.cm, lang)}
                           </span>
                         </button>
                       );
@@ -502,8 +516,8 @@ export function Configurator() {
                         )}
                       >
                         {sizeLabel === 'custom'
-                          ? `${sizeCm.toString().replace('.', ',')}cm`
-                          : '±0,5'}
+                          ? formatCm(sizeCm, lang)
+                          : lang === 'EN' ? '±0.2' : '±0,5'}
                       </span>
                     </button>
                   </div>
@@ -521,7 +535,7 @@ export function Configurator() {
                         <Minus size={14} strokeWidth={2.4} />
                       </button>
                       <span className="font-serif font-black text-[16px] tabular-nums text-[#2D3748] min-w-[64px] text-center">
-                        {sizeCm.toString().replace('.', ',')} cm
+                        {formatCm(sizeCm, lang)}
                       </span>
                       <button
                         type="button"
@@ -726,25 +740,36 @@ export function Configurator() {
                   <div
                     className={cn(
                       'grid gap-2',
-                      atelier?.allowCharms ? 'grid-cols-2' : 'grid-cols-1',
+                      // Number of visible tabs : 1 (beads only) / 2 (beads +
+                      // charms or beads + stones) / 3 (Classique : all three).
+                      isClassique && atelier?.allowCharms
+                        ? 'grid-cols-3'
+                        : atelier?.allowCharms || isClassique
+                          ? 'grid-cols-2'
+                          : 'grid-cols-1',
                     )}
                   >
-                    {TAB_IDS.filter((id) => id !== 'charms' || atelier?.allowCharms).map((id: TabId) => {
+                    {TAB_IDS.filter((id) => {
+                      if (id === 'charms') return Boolean(atelier?.allowCharms);
+                      if (id === 'stones') return isClassique;
+                      return true;
+                    }).map((id: TabId) => {
                       const active = tab === id;
                       // Kawaii uses figurines (Sanrio / Disney) instead of generic charms.
                       const label =
                         id === 'beads'
                           ? t('tabs.beads')
-                          : atelier?.id === 'atelier_kawaii'
-                            ? t('tabs.figurines')
-                            : t('tabs.charms');
-                      // Beads tab : compact "X,X / YY cm" (no decimals on the
-                      // target since presets are integer cm values).
-                      // Charms tab : count / max.
+                          : id === 'stones'
+                            ? t('tabs.stones')
+                            : atelier?.id === 'atelier_kawaii'
+                              ? t('tabs.figurines')
+                              : t('tabs.charms');
+                      // Beads + Stones share the same length budget (both
+                      // sit on the cord). Charms use a count / max badge.
                       const badge =
-                        id === 'beads'
-                          ? `${(lengthMm / 10).toFixed(1).replace('.', ',')}/${(targetMm / 10).toFixed(0)} cm`
-                          : `${charmsCount}/${atelier?.maxCharms ?? 0}`;
+                        id === 'charms'
+                          ? `${charmsCount}/${atelier?.maxCharms ?? 0}`
+                          : formatLengthRangeCompact(lengthMm, targetMm, lang);
                       return (
                         <button
                           key={id}
@@ -754,18 +779,18 @@ export function Configurator() {
                             setStep(id);
                           }}
                           className={cn(
-                            'flex items-center justify-between gap-2 p-3 rounded-xl border transition-all',
+                            'flex items-center justify-between gap-1.5 px-2.5 py-3 rounded-xl border transition-all min-w-0',
                             active
                               ? 'bg-[#2D3748] border-[#2D3748] text-white shadow-md'
                               : 'bg-white border-[#EEE9E0] text-[#718096] hover:border-[#A8BED4]',
                           )}
                         >
-                          <span className="text-[10px] md:text-[11px] font-black uppercase tracking-widest">
+                          <span className="text-[10px] font-black uppercase tracking-tight truncate">
                             {label}
                           </span>
                           <span
                             className={cn(
-                              'inline-flex items-center justify-center h-6 px-2.5 rounded-full text-[9px] font-black tabular-nums whitespace-nowrap',
+                              'inline-flex shrink-0 items-center justify-center h-5 px-2 rounded-full text-[9px] font-black tabular-nums whitespace-nowrap',
                               active ? 'bg-white/15 text-white' : 'bg-[#F5F0E8] text-[#3D5A73]',
                             )}
                           >
@@ -790,6 +815,18 @@ export function Configurator() {
                       {tab === 'beads' && (
                         <BeadPicker
                           onTilePointerDown={(refId, e) => startPaletteDrag('bead', refId, e)}
+                          // On Classique, "Perles" surfaces only pearls + enamel
+                          // shapes (the semi-precious stones live in the dedicated
+                          // "Pierres" tab). Other ateliers show everything they
+                          // allow — they don't have a Pierres tab to split off to.
+                          filterFamilies={isClassique ? NON_STONE_FAMILIES : undefined}
+                        />
+                      )}
+                      {tab === 'stones' && (
+                        <BeadPicker
+                          onTilePointerDown={(refId, e) => startPaletteDrag('bead', refId, e)}
+                          filterFamilies={STONE_FAMILIES}
+                          variant="stones"
                         />
                       )}
                       {tab === 'charms' && (
@@ -900,7 +937,7 @@ export function Configurator() {
               <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-[#A8BED4] mb-1">
                 {atelier?.id === 'atelier_kawaii'
                   ? `${atelier?.name} · ${atelier?.wireType}`
-                  : `${atelier?.name} · ${sizeLabel === 'custom' ? t('size.perso').replace('.', '') : sizeLabel} · ${sizeCm.toString().replace('.', ',')} cm`}
+                  : `${atelier?.name} · ${sizeLabel === 'custom' ? t('size.perso').replace('.', '') : sizeLabel} · ${formatCm(sizeCm, lang)}`}
               </p>
               <p className="font-serif text-[14px] md:text-[16px] font-black uppercase tracking-tight text-[#2D3748]">
                 {fitMessage}
@@ -1150,7 +1187,7 @@ function UnboxingModal({
   onClose: () => void;
   onShare: () => void;
 }) {
-  const { t } = useT();
+  const { t, lang } = useT();
   return (
     <AnimatePresence>
       {open && (
@@ -1222,7 +1259,7 @@ function UnboxingModal({
                     {t('unboxing.length')}
                   </p>
                   <p className="mt-1 font-serif text-[18px] font-black text-[#2D3748]">
-                    {formatCmFromMm(lengthMm)}
+                    {formatCmFromMm(lengthMm, lang)}
                   </p>
                 </div>
                 <div className="rounded-xl border border-[#EEE9E0] bg-white p-3">
@@ -1262,6 +1299,7 @@ function UnboxingModal({
 function SelectedComponentInfo({ slotId }: { slotId: string }) {
   const components = useConfigurator((s) => s.components);
   const figurine = useConfigurator((s) => s.figurine);
+  const { lang } = useT();
   const comp =
     figurine && figurine.slotId === slotId ? figurine : components.find((c) => c.slotId === slotId);
   if (!comp) return null;
@@ -1282,7 +1320,7 @@ function SelectedComponentInfo({ slotId }: { slotId: string }) {
             {bead.name}
           </p>
           <p className="text-[10px] font-black uppercase tracking-widest text-[#A8BED4] tabular-nums">
-            {bead.sizeMm.toString().replace('.', ',')}mm
+            {formatBeadSize(bead.sizeMm, lang)}
           </p>
         </div>
       </>

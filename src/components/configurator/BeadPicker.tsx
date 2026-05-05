@@ -15,31 +15,48 @@ import type { BeadShape } from '@/types';
 import { haptic } from '@/lib/utils/feedback';
 import { beadPhotoZoom } from '@/lib/utils/bead-display';
 import { useT } from '@/lib/i18n/use-t';
-import { formatCmFromMm } from '@/lib/utils/format';
+import { formatBeadSize, formatCmFromMm } from '@/lib/utils/format';
 import { cn } from '@/lib/utils/cn';
 
 interface BeadPickerProps {
   /** Called on pointerdown over a tile so the parent can begin a drag-to-bracelet */
   onTilePointerDown?: (refId: string, e: React.PointerEvent) => void;
+  /** Optional whitelist of stone families. If provided, only beads in these
+   *  families are rendered (after the atelier-allowed filter). Used to split
+   *  the Classique picker into a "Perles" (pearl + enamel) tab and a
+   *  "Pierres" (semi-precious stones) tab. When omitted, all atelier-allowed
+   *  beads are shown — the default for ateliers with a single tab. */
+  filterFamilies?: import('@/types').StoneFamily[];
+  /** Variant of the picker — drives the title + empty-state copy. Defaults
+   *  to 'beads'. */
+  variant?: 'beads' | 'stones';
 }
 
-export function BeadPicker({ onTilePointerDown }: BeadPickerProps = {}) {
+export function BeadPicker({
+  onTilePointerDown,
+  filterFamilies,
+  variant = 'beads',
+}: BeadPickerProps = {}) {
   const addBead = useConfigurator((s) => s.addBead);
   const atelierId = useConfigurator((s) => s.atelierId);
   const sizeCm = useConfigurator((s) => s.sizeCm);
   const components = useConfigurator((s) => s.components);
   const atelier = ATELIER_BY_ID[atelierId];
-  const { t } = useT();
+  const { t, lang } = useT();
 
   const [shapeFilter, setShapeFilter] = useState<BeadShape | null>(null);
 
   // Only beads compatible with the chosen atelier — and only those that have a real
   // product photo (we removed the SVG-fallback display: we surface the actual catalog only).
+  // When `filterFamilies` is provided, we further restrict to that whitelist.
   const atelierBeads = useMemo(() => {
     const withPhoto = BEADS.filter((b) => b.images.length > 0);
-    if (!atelier) return withPhoto;
-    return withPhoto.filter((b) => atelier.allowedBeadFamilies.includes(b.family));
-  }, [atelier]);
+    const allowed = atelier
+      ? withPhoto.filter((b) => atelier.allowedBeadFamilies.includes(b.family))
+      : withPhoto;
+    if (!filterFamilies) return allowed;
+    return allowed.filter((b) => filterFamilies.includes(b.family));
+  }, [atelier, filterFamilies]);
 
   const shapes = useMemo(
     () => Array.from(new Set(atelierBeads.map((b) => b.shape))) as BeadShape[],
@@ -55,21 +72,21 @@ export function BeadPicker({ onTilePointerDown }: BeadPickerProps = {}) {
   const atLimit = !canAddAny && components.length > 0;
   const helperText =
     fit.status === 'empty'
-      ? t('bead.helper.empty', formatCmFromMm(targetMm))
+      ? t('bead.helper.empty', formatCmFromMm(targetMm, lang))
       : fit.status === 'ready'
         ? t('bead.helper.ready')
         : fit.status === 'too-long'
           ? t('bead.helper.tooLong')
           : atLimit
             ? t('bead.helper.ready')
-            : t('bead.helper.tooShort', formatCmFromMm(fit.remainingMm));
+            : t('bead.helper.tooShort', formatCmFromMm(fit.remainingMm, lang));
 
   return (
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="text-xl md:text-2xl font-serif font-black text-[#2D3748] uppercase tracking-tighter mb-1">
-            {t('bead.title')}
+            {t(variant === 'stones' ? 'bead.title.stones' : 'bead.title')}
           </h3>
           <p className="text-[13px] text-[#718096] italic">{helperText}</p>
         </div>
@@ -81,7 +98,7 @@ export function BeadPicker({ onTilePointerDown }: BeadPickerProps = {}) {
               : 'bg-[#F5F0E8] text-[#2D3748] border border-[#EEE9E0]',
           )}
         >
-          {formatCmFromMm(lengthMm)} / {formatCmFromMm(targetMm)}
+          {formatCmFromMm(lengthMm, lang)} / {formatCmFromMm(targetMm, lang)}
         </div>
       </div>
 
@@ -114,7 +131,7 @@ export function BeadPicker({ onTilePointerDown }: BeadPickerProps = {}) {
               {t('bead.empty.title')}
             </p>
             <p className="text-[13px] text-[#718096] italic">
-              {t('bead.empty.description')}
+              {t(variant === 'stones' ? 'bead.empty.stones' : 'bead.empty.description')}
             </p>
           </div>
         ) : (
@@ -161,7 +178,7 @@ export function BeadPicker({ onTilePointerDown }: BeadPickerProps = {}) {
                       {tileName(bead.name)}
                     </p>
                     <p className="text-[9px] font-black text-[#A8BED4] uppercase tracking-widest tabular-nums">
-                      {bead.sizeMm.toString().replace('.', ',')}mm
+                      {formatBeadSize(bead.sizeMm, lang)}
                     </p>
                   </div>
                 </button>

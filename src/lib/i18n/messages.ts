@@ -30,6 +30,10 @@ const FR: Dict = {
   'atelierSelect.title.line2': 'choisissez-vous ?',
   'atelierSelect.choose': 'Choisir →',
   'atelierSelect.haveGiftCode': 'J’ai un code cadeau',
+  'atelierSelect.freeSize': 'Taille libre',
+  'atelierSelect.figurineSpec': '+ {0} figurine',
+  'atelierSelect.charmSpec.singular': '+ {0} charm',
+  'atelierSelect.charmSpec.plural': '+ {0} charms',
 
   // Atelier names — kept as-is for brand consistency, but optional aliases
   'atelier.bracelet_bar.short': 'Essentiel',
@@ -65,6 +69,7 @@ const FR: Dict = {
 
   // Tabs / palette
   'tabs.beads': 'Perles',
+  'tabs.stones': 'Pierres',
   'tabs.charms': 'Charms',
   'tabs.figurines': 'Figurines',
 
@@ -233,8 +238,24 @@ const FR: Dict = {
   // Bracelet preview misc
   'preview.noBeads': 'AUCUNE PERLE',
 
+  // Composition tray
+  'composition.title': 'Ma composition',
+  'composition.piecesSingular': '{0} pièce',
+  'composition.piecesPlural': '{0} pièces',
+  'composition.empty': 'Le fil attend sa première perle.',
+  'composition.side': 'Side',
+  'composition.offCord': 'Hors fil',
+  'composition.figurine': 'Figurine',
+  'composition.charm': 'Charm',
+  'composition.bead': 'Perle',
+  'composition.moveLeft': 'Déplacer vers la gauche',
+  'composition.moveRight': 'Déplacer vers la droite',
+  'composition.remove': 'Retirer',
+
   // Bead picker
   'bead.title': 'Choisissez vos perles',
+  'bead.title.stones': 'Choisissez vos pierres',
+  'bead.empty.stones': 'Aucune pierre disponible pour le moment.',
   'bead.helper.empty': 'Encore {0} pour une taille parfaite',
   'bead.helper.ready': 'Votre bracelet est complet et parfaitement équilibré. Finalisons votre création.',
   'bead.helper.tooLong': 'Retirez une perle pour retrouver une composition équilibrée.',
@@ -334,6 +355,10 @@ const EN: Dict = {
   'atelierSelect.title.line2': 'do you choose?',
   'atelierSelect.choose': 'Choose →',
   'atelierSelect.haveGiftCode': 'I have a gift code',
+  'atelierSelect.freeSize': 'Free size',
+  'atelierSelect.figurineSpec': '+ {0} figurine',
+  'atelierSelect.charmSpec.singular': '+ {0} charm',
+  'atelierSelect.charmSpec.plural': '+ {0} charms',
 
   'atelier.bracelet_bar.short': 'Essential',
   'atelier.kawaii.short': 'Kawaii',
@@ -368,6 +393,7 @@ const EN: Dict = {
 
   // Tabs / palette
   'tabs.beads': 'Beads',
+  'tabs.stones': 'Stones',
   'tabs.charms': 'Charms',
   'tabs.figurines': 'Figurines',
 
@@ -535,6 +561,20 @@ const EN: Dict = {
 
   // Bracelet preview misc
   'preview.noBeads': 'NO BEADS',
+
+  // Composition tray
+  'composition.title': 'My composition',
+  'composition.piecesSingular': '{0} piece',
+  'composition.piecesPlural': '{0} pieces',
+  'composition.empty': 'The cord is waiting for its first bead.',
+  'composition.side': 'Side',
+  'composition.offCord': 'Off cord',
+  'composition.figurine': 'Figurine',
+  'composition.charm': 'Charm',
+  'composition.bead': 'Bead',
+  'composition.moveLeft': 'Move left',
+  'composition.moveRight': 'Move right',
+  'composition.remove': 'Remove',
 
   // Bead picker
   'bead.title': 'Choose your beads',

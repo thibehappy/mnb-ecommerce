@@ -1,6 +1,9 @@
 import type { SharedBraceletDesign } from '@/lib/store/configurator';
 
-type ShareableComponent = Pick<SharedBraceletDesign['components'][number], 'kind' | 'refId'>;
+type ShareableComponent = Pick<
+  SharedBraceletDesign['components'][number],
+  'kind' | 'refId' | 'flipped'
+>;
 
 interface ShareableBraceletPayload {
   v: 1;
@@ -9,6 +12,10 @@ interface ShareableBraceletPayload {
   sizeLabel: SharedBraceletDesign['sizeLabel'];
   components: ShareableComponent[];
   figurine: ShareableComponent | null;
+  /** Kawaii attachment ids — preserved verbatim through the URL when
+   *  set ; missing keys mean "use catalogue defaults" on hydration. */
+  figurineChainId?: string;
+  figurineClaspId?: string;
   title?: string;
   intention?: string;
 }
@@ -22,6 +29,9 @@ export function encodeBraceletDesign(design: SharedBraceletDesign): string {
     components: design.components.map((component) => ({
       kind: component.kind,
       refId: component.refId,
+      // Only emit `flipped` when truthy — keeps URLs short for the
+      // common case where every component is in its default orientation.
+      ...(component.flipped ? { flipped: true } : {}),
     })),
     figurine: design.figurine
       ? {
@@ -29,6 +39,10 @@ export function encodeBraceletDesign(design: SharedBraceletDesign): string {
           refId: design.figurine.refId,
         }
       : null,
+    // Only emit attachment ids when present + non-empty — keeps the
+    // URLs tight for non-Kawaii designs.
+    ...(design.figurineChainId ? { figurineChainId: design.figurineChainId } : {}),
+    ...(design.figurineClaspId ? { figurineClaspId: design.figurineClaspId } : {}),
     title: design.title,
     intention: design.intention,
   };
@@ -66,6 +80,7 @@ export function decodeBraceletDesign(raw: string): SharedBraceletDesign | null {
           slotId: `shared-${index}`,
           kind: component.kind,
           refId: component.refId,
+          ...(component.flipped === true ? { flipped: true } : {}),
         })),
       figurine:
         parsed.figurine &&
@@ -77,6 +92,10 @@ export function decodeBraceletDesign(raw: string): SharedBraceletDesign | null {
               refId: parsed.figurine.refId,
             }
           : null,
+      figurineChainId:
+        typeof parsed.figurineChainId === 'string' ? parsed.figurineChainId : undefined,
+      figurineClaspId:
+        typeof parsed.figurineClaspId === 'string' ? parsed.figurineClaspId : undefined,
       title: typeof parsed.title === 'string' ? parsed.title : undefined,
       intention: typeof parsed.intention === 'string' ? parsed.intention : undefined,
     };

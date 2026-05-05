@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   Check,
   Copy,
+  FlipVertical2,
   Gift,
   GripHorizontal,
   Minus,
@@ -89,6 +90,8 @@ export function Configurator() {
     setStep,
     components,
     figurine,
+    figurineChainId,
+    figurineClaspId,
     atelierId,
     sizeCm,
     sizeLabel,
@@ -98,6 +101,7 @@ export function Configurator() {
     select,
     removeComponent,
     moveComponent,
+    toggleFlip,
     insertBeadAt,
     insertCharmAt,
     clearComponents,
@@ -133,6 +137,12 @@ export function Configurator() {
   // so the checkout page can display it on the receipt.
   const [fulfillmentMode, setFulfillmentMode] =
     useState<FulfillmentMode>('diy-kit');
+  // Kawaii is always assembled by us — the memory wire isn't sealed by
+  // the customer. We don't mutate the underlying state (so switching
+  // back to Classique restores the user's previous DIY/assembled
+  // choice), we just override at read time.
+  const effectiveFulfillmentMode: FulfillmentMode =
+    atelier?.id === 'atelier_kawaii' ? 'assembled-paris' : fulfillmentMode;
 
   const [justAddedCart, setJustAddedCart] = useState(false);
   const [shareStatus, setShareStatus] = useState<string | null>(null);
@@ -189,6 +199,12 @@ export function Configurator() {
   // Stones tab is Classique-only; Charms tab requires atelier.allowCharms.
   // Anything else collapses back to "beads" (the always-available tab).
   const isClassique = atelier?.id === 'atelier_classique';
+  // Kawaii bracelets ship on a memory wire that's too tricky to close at
+  // home : we always assemble them ourselves in Paris. The DIY-kit option
+  // is hidden in the order row and the snapshot fulfillment mode is
+  // forced to 'assembled-paris' regardless of what's stored in
+  // fulfillmentMode (carried over from a previous atelier session).
+  const isKawaii = atelier?.id === 'atelier_kawaii';
   const tab: TabId =
     step === 'charms' && atelier?.allowCharms
       ? 'charms'
@@ -310,7 +326,7 @@ export function Configurator() {
       useConfigurator.getState(),
       name,
       undefined,
-      fulfillmentMode,
+      effectiveFulfillmentMode,
     );
     addCustom(design, 1);
     const rect = addToCartRef.current?.getBoundingClientRect();
@@ -341,7 +357,7 @@ export function Configurator() {
       useConfigurator.getState(),
       name,
       undefined,
-      fulfillmentMode,
+      effectiveFulfillmentMode,
     );
     if (activeGiftCard.kind === 'designed' || activeGiftCard.kind === 'open') {
       updateDesignedGift(activeGiftCard.code, design);
@@ -570,6 +586,8 @@ export function Configurator() {
                   components={components}
                   targetMm={targetMm}
                   figurine={figurine}
+                  figurineChainId={figurineChainId}
+                  figurineClaspId={figurineClaspId}
                   variant={atelier?.id === 'atelier_kawaii' ? 'u' : 'loop'}
                   selectedSlotId={selectedComponent}
                   onSelect={(id) => select(id === selectedComponent ? null : id)}
@@ -607,6 +625,37 @@ export function Configurator() {
                     )}
                   >
                     <SelectedComponentInfo slotId={selectedComponent} />
+                    {/* Flip button — only meaningful for ON-CORD beads
+                        (asymmetric shapes : heart / star / bow). Charms
+                        hang from the anneau by gravity and the figurine
+                        sits off-cord, so flipping them isn't exposed. */}
+                    {(() => {
+                      const sel = components.find(
+                        (c) => c.slotId === selectedComponent && c.kind === 'bead',
+                      );
+                      if (!sel) return null;
+                      const isFlipped = sel.flipped === true;
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            haptic(6);
+                            toggleFlip(selectedComponent);
+                          }}
+                          aria-pressed={isFlipped}
+                          aria-label={t('configurator.flip')}
+                          title={t('configurator.flip')}
+                          className={cn(
+                            'inline-flex items-center justify-center h-8 w-8 rounded-lg transition-colors ml-1',
+                            isFlipped
+                              ? 'bg-[#3D5A73] text-white hover:bg-[#2D3748]'
+                              : 'text-[#3D5A73] hover:bg-[#3D5A73]/10',
+                          )}
+                        >
+                          <FlipVertical2 size={14} strokeWidth={1.8} />
+                        </button>
+                      );
+                    })()}
                     <button
                       type="button"
                       onClick={() => removeComponent(selectedComponent)}
@@ -864,26 +913,38 @@ export function Configurator() {
                 haptic(8);
                 removeComponent(slotId);
               }}
+              onFlip={(slotId) => {
+                haptic(6);
+                toggleFlip(slotId);
+              }}
             />
           </div>
         )}
 
-        {/* ─── SHARE PREVIEW (carte partagée) ─── */}
-        <div className="mt-4">
-          <SharePreview
-            components={components}
-            figurine={figurine}
-            title={draftTitle || DEFAULT_BRACELET_NAME}
-            sizeCm={sizeCm}
-          />
-        </div>
+        {/* ─── SHARE PREVIEW (carte partagée) ───
+            Hidden on Kawaii — the figurine + memory-wire combo doesn't
+            translate well into the SVG share card and the atelier
+            doesn't really need a "preview to share" step. */}
+        {!isKawaii && (
+          <div className="mt-4">
+            <SharePreview
+              components={components}
+              figurine={figurine}
+              title={draftTitle || DEFAULT_BRACELET_NAME}
+              sizeCm={sizeCm}
+            />
+          </div>
+        )}
 
         {/* ─── FULFILLMENT MODE ─── assembled-Paris vs DIY kit. Sits right
             above the cart row so the choice is visible at the same scroll
             depth as the price + Ajouter au panier button. Wording matches
             Dany's branch verbatim. Hidden during a gift redemption — the
-            sender's chosen mode is already baked into the gift card. */}
-        {!activeRedemptionCode && (
+            sender's chosen mode is already baked into the gift card.
+            Also hidden for Kawaii : the memory wire is too tricky to
+            close at home, so we always ship assembled (forced via
+            `effectiveFulfillmentMode`). */}
+        {!activeRedemptionCode && !isKawaii && (
           <div className="mt-6 md:mt-8 rounded-[1.5rem] border border-[#EEE9E0] bg-white p-4 md:p-5 shadow-sm">
             <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-[#A8BED4]">
               {t('fulfillment.label')}

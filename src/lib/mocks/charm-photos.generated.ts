@@ -4,4 +4,5 @@
 
 export const CHARM_PHOTOS: Record<string, string[]> = {
   'charm_figurine_signature': ['/photos/figurines/charm_figurine_signature.png'],
+  'charm_tour_eiffel': ['/photos/charms/charm_tour_eiffel.png'],
 };

@@ -22,3 +22,9 @@ playwright/.cache
 
 # TypeScript incremental builds
 *.tsbuildinfo
+
+# Raw / source-only photos waiting to be detoured. Contributors drop
+# huge JPGs/PNGs here ; the pipeline produces lighter detoured copies
+# in beads/, charms/, figurines/, attachments/. Don't commit the
+# multi-megabyte sources — they'd bloat the repo for no runtime gain.
+public/photos/other/

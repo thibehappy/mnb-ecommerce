@@ -4,6 +4,7 @@ import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState }
 import type { BraceletComponent } from '@/types';
 import { BEAD_BY_ID } from '@/lib/mocks/beads';
 import { CHARM_BY_ID } from '@/lib/mocks/charms';
+import { CHAIN_BY_ID, CLASP_BY_ID } from '@/lib/mocks/attachments';
 import { sizeMmOf, totalLengthMm } from '@/lib/store/configurator';
 import { cn } from '@/lib/utils/cn';
 import { haptic } from '@/lib/utils/feedback';
@@ -28,6 +29,11 @@ interface Props {
   /** Optional figurine attached to the bracelet (Kawaii only). Rendered as
    *  a side decoration outside the cord, not as a slot on it. */
   figurine?: BraceletComponent | null;
+  /** Kawaii attachment ids — chain colour + clasp shape that visually
+   *  link the figurine to the bracelet wire. Ignored when no figurine
+   *  is provided or when the catalogue lookup fails. */
+  figurineChainId?: string | null;
+  figurineClaspId?: string | null;
   variant?: Variant;
   selectedSlotId?: string | null;
   onSelect?: (slotId: string) => void;
@@ -73,7 +79,11 @@ function r(n: number): number {
 
 function viewBoxFor(variant: Variant): { width: number; height: number } {
   if (variant === 'flat') return { width: 1000, height: 140 };
-  if (variant === 'u') return { width: 1000, height: 680 };
+  // U canvas height bumped from 680 → 760 to host the figurine
+  // attachment system (chain + clasp) above the bracelet without
+  // clipping at 100 % zoom. The bracelet itself keeps the same
+  // sideLen — only the empty space above its top is enlarged.
+  if (variant === 'u') return { width: 1000, height: 760 };
   // Loop — height kept compact so the rendered SVG doesn't push the stage
   // container taller than its min-h (which would shove the bottom action
   // buttons offscreen). The curve is positioned at the center of this
@@ -85,7 +95,10 @@ const U_GEOM = (() => {
   const { width, height } = viewBoxFor('u');
   const cx = width / 2;
   const curveR = 135;
-  const yTop = 60;
+  // 140 px of headroom above the bracelet so the chain + heart/round
+  // clasp can extend upward without leaving the canvas. Bottom margin
+  // stays at 60 px (no need for extra room below the curve).
+  const yTop = 140;
   const yBottom = height - 60;
   const yArcCenter = yBottom - curveR;
   return {
@@ -399,6 +412,8 @@ export const BraceletPreview = forwardRef<BraceletPreviewHandle, Props>(function
     components,
     targetMm,
     figurine = null,
+    figurineChainId = null,
+    figurineClaspId = null,
     variant = 'loop',
     selectedSlotId,
     onSelect,
@@ -592,6 +607,16 @@ export const BraceletPreview = forwardRef<BraceletPreviewHandle, Props>(function
 
   const stageCursor = isPanning ? 'grabbing' : safeZoom > 1.01 && onPanChange ? 'grab' : 'default';
 
+  // Figurine geometry derived once so we can reuse it both for the
+  // figurine glyph itself AND for the chain/clasp render that paints
+  // ON TOP of the beads (= AFTER components.map). Keeping a single
+  // source of truth here means the two render passes can't drift
+  // when the layout numbers change.
+  const figGeom =
+    variant === 'u'
+      ? { cx: U_GEOM.xLeft - 240, cy: U_GEOM.yTop + 130, r: 90 }
+      : { cx: 130, cy: 130, r: 90 };
+
   return (
     <div
       className={cn('relative w-full overflow-hidden', className)}
@@ -775,18 +800,15 @@ export const BraceletPreview = forwardRef<BraceletPreviewHandle, Props>(function
             })()}
 
           {/* Figurine attached to the bracelet — rendered NEXT TO the cord
-             (not as a slot on it). Only Kawaii passes a figurine. */}
+             (not as a slot on it). Only Kawaii passes a figurine.
+             The chain + clasp are NOT rendered here ; they paint after
+             components.map below so they sit ON TOP of the topmost
+             bead on the left leg (cf. user feedback). */}
           {figurine &&
             (() => {
               const charm = CHARM_BY_ID[figurine.refId];
               if (!charm || !charm.images[0]) return null;
-              // Anchor : on the LEFT of the bracelet.
-              // For the U (Kawaii) we sit it at the vertical level of the
-              // opening, in the empty space left of the left leg.
-              // For other variants, fall back to a top-left position.
-              const figCx = variant === 'u' ? U_GEOM.xLeft - 240 : 130;
-              const figCy = variant === 'u' ? U_GEOM.yTop + 130 : 130;
-              const figR = 90;
+              const { cx: figCx, cy: figCy, r: figR } = figGeom;
               const isFigSelected = figurine.slotId === selectedSlotId;
               return (
                 <g
@@ -807,20 +829,6 @@ export const BraceletPreview = forwardRef<BraceletPreviewHandle, Props>(function
                     strokeDasharray="3 4"
                     opacity="0.7"
                   />
-                  {/* "Attached" link — dashed line from the figurine halo
-                     toward the U's left leg, suggesting the clasp. */}
-                  {variant === 'u' && (
-                    <line
-                      x1={figR + 18}
-                      y1={0}
-                      x2={U_GEOM.xLeft - figCx}
-                      y2={0}
-                      stroke="#A8BED4"
-                      strokeWidth="1.5"
-                      strokeDasharray="2 3"
-                      opacity="0.5"
-                    />
-                  )}
                   {isFigSelected && (
                     <circle r={figR + 26} fill="#A8BED4" fillOpacity="0.4">
                       <animate
@@ -919,10 +927,13 @@ export const BraceletPreview = forwardRef<BraceletPreviewHandle, Props>(function
                           />
                         </circle>
                       )}
-                      {/* Rotate the bead photo so its drilled hole follows the tangent. */}
+                      {/* Rotate the bead photo so its drilled hole follows the tangent.
+                          `comp.flipped` adds another +180° on top — only meaningful
+                          for asymmetric shapes (heart / star / bow) where the user
+                          wants to swap top↔bottom (e.g. heart pointing down → up). */}
                       <g
                         filter={isSelected && !isDragged ? 'url(#mnb-glow)' : 'url(#mnb-bead-shadow)'}
-                        transform={`rotate(${pos.rot})`}
+                        transform={`rotate(${pos.rot + (comp.flipped ? 180 : 0)})`}
                       >
                         <BeadShape
                           hex={bead.hex}
@@ -945,45 +956,173 @@ export const BraceletPreview = forwardRef<BraceletPreviewHandle, Props>(function
 
               const charm = CHARM_BY_ID[comp.refId];
               if (!charm) return null;
+
+              // Charms render as PENDANTS hanging straight DOWN from the
+              // cord — gravity-style. We tried radial-outward first but
+              // bracelets viewed top-half-ellipse have very little room
+              // ABOVE the top points, so charms placed there got clipped
+              // by the canvas. Hanging down is also closer to how a real
+              // pendant sits on a wrist.
+              //
+              // The charm's `sizeMm` (~2 mm — the fine attache ring) is
+              // what consumes the cord budget; the visible body is sized
+              // independently via CHARM_VISUAL_MM, applied with the same
+              // ×3 photo zoom as beads so it scales with bracelet size.
+              const charmSizeMm = sizeMmOf(comp);
+              const pathScale =
+                (2 * pos.displayRadius) / (charmSizeMm * BRACELET_ZOOM);
+              const CHARM_VISUAL_MM = 9;
+              const CHARM_HALF =
+                (CHARM_VISUAL_MM * pathScale * BRACELET_ZOOM) / 2;
+              const CHARM_SIZE = CHARM_HALF * 2;
+              // Anneau hole sits ~10 % from the photo's top edge; offset
+              // the image upward so that hole aligns with the cord
+              // position instead of the visual top of the anneau ring.
+              // This pulls the body slightly closer to the bracelet.
+              const ANNEAU_OFFSET = CHARM_SIZE * 0.1;
+
               return (
                 <g key={comp.slotId} {...common}>
                   <g pointerEvents="none">
-                    <ellipse
-                      cx="0"
-                      cy={coreR * 0.78}
-                      rx={coreR * 0.78}
-                      ry={Math.max(2.5, coreR * 0.18)}
-                      fill="#2D3748"
-                      opacity={isDragged ? 0.06 : 0.1}
-                    />
+                    {/* Selection halo around the body center */}
                     {isSelected && !isDragged && (
-                      <circle r={coreR + 5} fill="#FFFFFF" fillOpacity="0.72">
+                      <circle
+                        cx={0}
+                        cy={CHARM_HALF - ANNEAU_OFFSET}
+                        r={CHARM_HALF + 6}
+                        fill="#FFFFFF"
+                        fillOpacity="0.55"
+                      >
                         <animate
                           attributeName="r"
-                          values={`${coreR + 4};${coreR + 7};${coreR + 4}`}
+                          values={`${CHARM_HALF + 4};${CHARM_HALF + 9};${CHARM_HALF + 4}`}
+                          dur="1.8s"
+                          repeatCount="indefinite"
+                        />
+                        <animate
+                          attributeName="fill-opacity"
+                          values="0.55;0.18;0.55"
                           dur="1.8s"
                           repeatCount="indefinite"
                         />
                       </circle>
                     )}
+                    {/* The charm photo — anneau hole at the cord, body
+                        hanging straight down (no rotation). */}
                     <g filter={isSelected && !isDragged ? 'url(#mnb-glow)' : 'url(#mnb-bead-shadow)'}>
-                      <CharmShape
-                        radius={radius}
-                        category={charm.category}
-                        material={charm.material}
-                        image={charm.images[0]}
+                      <image
+                        href={charm.images[0]}
+                        x={-CHARM_HALF}
+                        y={-ANNEAU_OFFSET}
+                        width={CHARM_SIZE}
+                        height={CHARM_SIZE}
+                        preserveAspectRatio="xMidYMid meet"
                       />
                     </g>
                     {isSelected && !isDragged && (
-                      <circle r={coreR + 2} fill="none" stroke="#3D5A73" strokeWidth="1.5" />
+                      <circle
+                        cx={0}
+                        cy={CHARM_HALF - ANNEAU_OFFSET}
+                        r={CHARM_HALF + 2}
+                        fill="none"
+                        stroke="#3D5A73"
+                        strokeWidth="1.4"
+                      />
                     )}
                   </g>
-                  {/* Hit area — invisible circle matching the visible charm. */}
-                  <circle r={hitR} fill="transparent" />
+                  {/* Hit area — covers the body. */}
+                  <rect
+                    x={-CHARM_HALF}
+                    y={-ANNEAU_OFFSET}
+                    width={CHARM_SIZE}
+                    height={CHARM_SIZE}
+                    fill="transparent"
+                  />
                 </g>
               );
             })}
           </g>
+
+          {/* Kawaii attachment overlay : chain (real PNG photo) + clasp,
+              rendered AFTER components.map so they paint ON TOP of the
+              topmost bead on the left leg. The user explicitly asked for
+              this z-ordering — the clasp should "pass over" the highest
+              bead, mimicking how the real metal ring closes around the
+              bracelet wire just above the first bead. Coordinates are
+              ABSOLUTE (no figGeom translate wrapper) since we sit
+              outside the figurine `<g>`.
+              The chain is the studio photo, rotated to follow the
+              diagonal from figurine halo edge to top-of-left-leg. The
+              square-canvas photos (1500×1500) host a horseshoe-shape
+              chain whose content occupies ~73 % of the canvas width ;
+              we size the image at len × 1.4 so the chain visually
+              spans the path with a small breathing margin on either
+              end. preserveAspectRatio="xMidYMid meet" keeps the
+              horseshoe undistorted. */}
+          {figurine &&
+            variant === 'u' &&
+            (() => {
+              const chain = figurineChainId ? CHAIN_BY_ID[figurineChainId] : undefined;
+              const clasp = figurineClaspId ? CLASP_BY_ID[figurineClaspId] : undefined;
+              if (!chain && !clasp) return null;
+
+              const { cx: figCx, cy: figCy, r: figR } = figGeom;
+              // Vertical lift so the chain end sits ABOVE the topmost
+              // bead on the left leg instead of squarely on top of it.
+              const claspLift = 36;
+              // Extra lift just for the clasp glyph (not the chain).
+              // The chain terminates at endY ; the clasp body floats
+              // a tiny bit higher so it's clearly above the bead row
+              // without visibly detaching from the chain tip.
+              const claspExtraLift = 14;
+              // Absolute path : figurine halo edge → just above the top of left leg.
+              const startX = figCx + figR + 18;
+              const startY = figCy;
+              const endX = U_GEOM.xLeft;
+              const endY = U_GEOM.yTop - claspLift;
+              const claspCenterY = endY - claspExtraLift;
+              const dxC = endX - startX;
+              const dyC = endY - startY;
+              const len = Math.sqrt(dxC * dxC + dyC * dyC);
+
+              const angleDeg = (Math.atan2(dyC, dxC) * 180) / Math.PI;
+              const midX = (startX + endX) / 2;
+              const midY = (startY + endY) / 2;
+              // Photo canvas is square (1500×1500) but the actual chain
+              // content fills only ~73 % of the width. Sizing at len × 1.4
+              // makes the chain content land at roughly the path length,
+              // letting the figurine halo edge and the clasp touch its
+              // ends visually.
+              const chainImgSize = Math.max(120, len * 1.4);
+              const claspSize = 90;
+
+              return (
+                <g pointerEvents="none">
+                  {chain?.images[0] && (
+                    <g transform={`translate(${midX} ${midY}) rotate(${angleDeg.toFixed(3)})`}>
+                      <image
+                        href={chain.images[0]}
+                        x={-chainImgSize / 2}
+                        y={-chainImgSize / 2}
+                        width={chainImgSize}
+                        height={chainImgSize}
+                        preserveAspectRatio="xMidYMid meet"
+                      />
+                    </g>
+                  )}
+                  {clasp?.images[0] && (
+                    <image
+                      href={clasp.images[0]}
+                      x={endX - claspSize / 2}
+                      y={claspCenterY - claspSize / 2}
+                      width={claspSize}
+                      height={claspSize}
+                      preserveAspectRatio="xMidYMid meet"
+                    />
+                  )}
+                </g>
+              );
+            })()}
         </svg>
       </div>
       {isEmpty && (
@@ -1170,32 +1309,3 @@ function BeadShape({
   );
 }
 
-function CharmShape({
-  radius,
-  category,
-  material,
-  image,
-}: {
-  radius: number;
-  category: string;
-  material: string;
-  image?: string;
-}) {
-  if (image) {
-    return (
-      <image
-        href={image}
-        x={-radius}
-        y={-radius}
-        width={radius * 2}
-        height={radius * 2}
-        preserveAspectRatio="xMidYMid meet"
-      />
-    );
-  }
-  // SVG fallback (currently unused — charms catalog is empty)
-  const fill = material === 'dore' ? '#D4A85F' : material === 'argente' ? '#C5C8CC' : '#F5EFE3';
-  const stroke = material === 'dore' ? '#8F6F3E' : material === 'argente' ? '#8A8D90' : '#C4B89C';
-  void category;
-  return <circle r={radius * 0.5} fill={fill} stroke={stroke} strokeWidth="1.2" />;
-}

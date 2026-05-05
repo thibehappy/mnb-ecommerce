@@ -12,6 +12,14 @@ import type {
 } from '@/types';
 import { BEAD_BY_ID } from '@/lib/mocks/beads';
 import { CHARM_BY_ID } from '@/lib/mocks/charms';
+import {
+  CHAIN_BY_ID,
+  CHAINS,
+  CLASP_BY_ID,
+  CLASPS,
+  DEFAULT_CHAIN_ID,
+  DEFAULT_CLASP_ID,
+} from '@/lib/mocks/attachments';
 import { ATELIER_BY_ID, ATELIERS } from '@/lib/mocks/ateliers';
 import { uid } from '@/lib/utils/format';
 import { inspire, type Mood } from '@/lib/harmony/rules';
@@ -36,8 +44,30 @@ export interface SharedBraceletDesign {
   sizeLabel: SizeLabel;
   components: BraceletComponent[];
   figurine?: BraceletComponent | null;
+  /** Kawaii attachment system — only meaningful when `figurine` exists. */
+  figurineChainId?: string | null;
+  figurineClaspId?: string | null;
   title?: string;
   intention?: string;
+}
+
+/**
+ * Per-atelier "scratch pad" stashed when the user navigates away from
+ * an atelier so we can restore exactly where they left off when they
+ * come back. Only the user-editable bits — the rest (step, selection,
+ * drag state, …) is intentionally re-initialized on switch.
+ */
+export interface AtelierStash {
+  components: BraceletComponent[];
+  figurine: BraceletComponent | null;
+  sizeCm: number;
+  sizeLabel: SizeLabel;
+  draftTitle: string;
+  draftIntention: string;
+  /** Kawaii attachment ids — chain + clasp linking the figurine to
+   *  the bracelet wire. Both null/undefined for non-Kawaii ateliers. */
+  figurineChainId: string | null;
+  figurineClaspId: string | null;
 }
 
 interface ConfiguratorState {
@@ -61,11 +91,38 @@ interface ConfiguratorState {
    * target for the click-to-remove flow.
    */
   figurine: BraceletComponent | null;
+  /**
+   * Kawaii attachment system — these only carry visual / catalogue
+   * meaning when the atelier is Kawaii AND `figurine` is non-null.
+   * The user can still set them ahead of time (e.g. switch chain
+   * colour without a figurine yet selected) — the renderer just
+   * waits for the figurine to surface them.
+   *
+   *   - figurineChainId  : id of an `AttachmentChain` (small ball-chain)
+   *   - figurineClaspId  : id of an `AttachmentClasp` (snap ring/heart)
+   *
+   * Default to `DEFAULT_CHAIN_ID` / `DEFAULT_CLASP_ID` so picking a
+   * figurine renders something sensible without forcing the user to
+   * touch the attachment pickers.
+   */
+  figurineChainId: string;
+  figurineClaspId: string;
   step: ConfiguratorStep;
   selectedComponent: string | null;
   savedDesigns: BraceletConfig[];
   draftTitle: string;
   draftIntention: string;
+  /**
+   * Stashed state of the OTHER ateliers — populated on `setAtelier`
+   * when the user leaves an atelier mid-composition. Switching back
+   * restores from this map ; the entry for the currently-active
+   * atelier is irrelevant (the live state is the source of truth)
+   * and is overwritten on the next switch out.
+   *
+   * `reset` clears the whole stash — that action is the user
+   * explicitly asking for a clean slate.
+   */
+  ateliersStash: Record<string, AtelierStash>;
 
   setAtelier: (atelierId: string) => void;
   /** Pick a preset label. The cm + label snap together. */
@@ -84,12 +141,18 @@ interface ConfiguratorState {
   addCharm: (charmId: string) => void;
   /** Set / replace / clear the figurine attached to the bracelet (Kawaii). */
   setFigurine: (charmId: string | null) => void;
+  /** Pick the chain colour linking the figurine to the bracelet (Kawaii). */
+  setFigurineChain: (chainId: string) => void;
+  /** Pick the snap-ring/heart clasp the chain hooks onto (Kawaii). */
+  setFigurineClasp: (claspId: string) => void;
   /** Remove the component at the given index (splice). */
   removeAt: (idx: number) => void;
   /** Remove by slotId (used when click → trash on a selected component). */
   removeComponent: (slotId: string) => void;
   /** Move the component at index `from` to index `to` (drag-to-reorder). */
   moveComponent: (from: number, to: number) => void;
+  /** Toggle the 180° flip flag of a single component (by slotId). */
+  toggleFlip: (slotId: string) => void;
   /** Replace the entire components list (used by Inspire-moi). */
   replaceComponents: (next: BraceletComponent[]) => void;
   clearComponents: () => void;
@@ -225,9 +288,54 @@ export function canFit(
 ─────────────────────────────────────────────────────────────── */
 
 /**
+ * Fallback per-charm fee (€) for a charm placed BEYOND the atelier's
+ * included count when that charm doesn't declare its own `extraFee` in
+ * the catalogue. Different charms can override this with their own
+ * value (Tour Eiffel +1 €, médaille gravée +3 €, …).
+ *
+ * The first `atelier.maxCharms` charms always ride free with the
+ * bracelet price ; only the surplus is billed.
+ */
+export const DEFAULT_EXTRA_CHARM_FEE = 1;
+
+/** How many charms exceed the atelier's included `maxCharms` (≥ 0). */
+export function extraCharmsCount(atelierId: string, components: BraceletComponent[]): number {
+  const atelier = ATELIER_BY_ID[atelierId];
+  if (!atelier) return 0;
+  const onCord = components.filter((c) => c.kind === 'charm').length;
+  return Math.max(0, onCord - atelier.maxCharms);
+}
+
+/**
+ * Surcharge (€) for charms beyond the atelier's included count.
+ *
+ * The first `maxCharms` charms (in cord order) are free ; the rest are
+ * billed at each charm's own `extraFee`, falling back to
+ * `DEFAULT_EXTRA_CHARM_FEE` when undefined.
+ *
+ * Cord order is used (not insertion order) so the breakdown stays
+ * stable when the user reorders the bracelet — the visible "later"
+ * charms are the surplus.
+ */
+export function extraCharmsFee(atelierId: string, components: BraceletComponent[]): number {
+  const atelier = ATELIER_BY_ID[atelierId];
+  if (!atelier) return 0;
+  const charmComponents = components.filter((c) => c.kind === 'charm');
+  if (charmComponents.length <= atelier.maxCharms) return 0;
+  const surplus = charmComponents.slice(atelier.maxCharms);
+  let total = 0;
+  for (const c of surplus) {
+    const charm = CHARM_BY_ID[c.refId];
+    total += charm?.extraFee ?? DEFAULT_EXTRA_CHARM_FEE;
+  }
+  return total;
+}
+
+/**
  * Resolve the bracelet price :
  *   base = atelier price (forfaitaire, identique quelle que soit la taille)
  * + surcharge sum from any placed charm in the cord (Classique)
+ * + per-charm `extraFee` for each charm beyond atelier.maxCharms (see above)
  * + surcharge of the attached figurine if any (Kawaii)
  *   (typically +6€ for Sanrio / Disney licensed figurines).
  */
@@ -245,6 +353,7 @@ export function priceOf(
       const charm = CHARM_BY_ID[c.refId];
       if (charm?.surcharge) total += charm.surcharge;
     }
+    total += extraCharmsFee(atelierId, components);
   }
   if (figurine) {
     const charm = CHARM_BY_ID[figurine.refId];
@@ -301,28 +410,74 @@ export const useConfigurator = create<ConfiguratorState>()(
       sizeLabel: DEFAULT_SIZE,
       components: [],
       figurine: null,
+      figurineChainId: DEFAULT_CHAIN_ID,
+      figurineClaspId: DEFAULT_CLASP_ID,
       step: 'beads',
       selectedComponent: null,
       savedDesigns: [],
       draftTitle: '',
       draftIntention: '',
+      ateliersStash: {},
 
       setAtelier: (atelierId) => {
         const next = ATELIER_BY_ID[atelierId];
         if (!next) return set({ atelierId });
-        // Switching ateliers wipes the current composition : each atelier is a
-        // fresh start (different rules, different vibes, different price).
-        const nextSizeCm = sizeCmOf(atelierId, 'M');
-        set({
-          atelierId,
-          components: [],
-          figurine: null,
-          sizeCm: nextSizeCm,
-          sizeLabel: deriveSizeLabel(atelierId, nextSizeCm),
-          selectedComponent: null,
-          draftTitle: '',
-          draftIntention: '',
-        });
+        const state = get();
+        // Same atelier clicked again : nothing to stash, nothing to restore.
+        if (state.atelierId === atelierId) return;
+
+        // Snapshot the current atelier's composition so the user can
+        // come back to it untouched. We always overwrite — the live
+        // state is the source of truth for the atelier we're leaving.
+        const stash: Record<string, AtelierStash> = {
+          ...(state.ateliersStash ?? {}),
+          [state.atelierId]: {
+            components: state.components,
+            figurine: state.figurine,
+            sizeCm: state.sizeCm,
+            sizeLabel: state.sizeLabel,
+            draftTitle: state.draftTitle,
+            draftIntention: state.draftIntention,
+            figurineChainId: state.figurineChainId,
+            figurineClaspId: state.figurineClaspId,
+          },
+        };
+
+        // If we have a stash for the target atelier, restore it as-is.
+        // Otherwise start fresh : each first-visit gets a clean canvas.
+        const restored = stash[atelierId];
+        if (restored) {
+          set({
+            atelierId,
+            components: restored.components,
+            figurine: restored.figurine,
+            sizeCm: restored.sizeCm,
+            sizeLabel: restored.sizeLabel,
+            draftTitle: restored.draftTitle,
+            draftIntention: restored.draftIntention,
+            figurineChainId: restored.figurineChainId ?? DEFAULT_CHAIN_ID,
+            figurineClaspId: restored.figurineClaspId ?? DEFAULT_CLASP_ID,
+            selectedComponent: null,
+            ateliersStash: stash,
+          });
+        } else {
+          const nextSizeCm = sizeCmOf(atelierId, 'M');
+          set({
+            atelierId,
+            components: [],
+            figurine: null,
+            sizeCm: nextSizeCm,
+            sizeLabel: deriveSizeLabel(atelierId, nextSizeCm),
+            selectedComponent: null,
+            draftTitle: '',
+            draftIntention: '',
+            // Fresh atelier = catalogue defaults for the attachments
+            // (only consumed visually when atelier is Kawaii anyway).
+            figurineChainId: DEFAULT_CHAIN_ID,
+            figurineClaspId: DEFAULT_CLASP_ID,
+            ateliersStash: stash,
+          });
+        }
       },
 
       setSize: (label) =>
@@ -361,8 +516,11 @@ export const useConfigurator = create<ConfiguratorState>()(
           if (!atelier?.allowCharms) return state;
           const charm = CHARM_BY_ID[charmId];
           if (!charm) return state;
-          const charmsCount = state.components.filter((c) => c.kind === 'charm').length;
-          if (charmsCount >= atelier.maxCharms) return state;
+          // No hard count cap — charms beyond `atelier.maxCharms` are
+          // allowed and each one adds its own `extraFee` to the price
+          // (catalogue-defined, fallback DEFAULT_EXTRA_CHARM_FEE — see
+          // extraCharmsFee in priceOf). The cord-length budget is the
+          // only structural cap.
           if (!canFit(state.atelierId, state.sizeCm, state.components, charm.sizeMm)) return state;
           const clamped = Math.max(0, Math.min(idx, state.components.length));
           const next = [...state.components];
@@ -398,6 +556,21 @@ export const useConfigurator = create<ConfiguratorState>()(
           };
         }),
 
+      setFigurineChain: (chainId) =>
+        set((state) => {
+          // Reject unknown ids defensively — the picker passes valid
+          // ids, but a stale URL or corrupted localStorage shouldn't
+          // wipe the current choice.
+          if (!CHAIN_BY_ID[chainId]) return state;
+          return { figurineChainId: chainId };
+        }),
+
+      setFigurineClasp: (claspId) =>
+        set((state) => {
+          if (!CLASP_BY_ID[claspId]) return state;
+          return { figurineClaspId: claspId };
+        }),
+
       removeAt: (idx) =>
         set((state) => {
           if (idx < 0 || idx >= state.components.length) return state;
@@ -427,6 +600,16 @@ export const useConfigurator = create<ConfiguratorState>()(
             components: next,
             selectedComponent: state.selectedComponent === slotId ? null : state.selectedComponent,
           };
+        }),
+
+      toggleFlip: (slotId) =>
+        set((state) => {
+          const idx = state.components.findIndex((c) => c.slotId === slotId);
+          if (idx === -1) return state;
+          const target = state.components[idx]!;
+          const next = [...state.components];
+          next[idx] = { ...target, flipped: !target.flipped };
+          return { components: next };
         }),
 
       moveComponent: (from, to) =>
@@ -469,10 +652,27 @@ export const useConfigurator = create<ConfiguratorState>()(
           maxCharms: atelier?.maxCharms,
           charmKind: atelier?.id === 'atelier_kawaii' ? 'figurine' : 'charm',
         });
+
+        // Kawaii : also randomise the figurine attachment system so
+        // each "Inspire-moi" press gives a fresh chain colour + clasp
+        // shape combo, not just a fresh bead composition. Stays inert
+        // for non-Kawaii ateliers (no figurine → no attachment).
+        const isKawaii = atelier?.id === 'atelier_kawaii';
+        const randomChainId =
+          isKawaii && CHAINS.length > 0
+            ? CHAINS[Math.floor(Math.random() * CHAINS.length)]!.id
+            : null;
+        const randomClaspId =
+          isKawaii && CLASPS.length > 0
+            ? CLASPS[Math.floor(Math.random() * CLASPS.length)]!.id
+            : null;
+
         set({
           components: result.components,
           figurine: result.figurine,
           selectedComponent: null,
+          ...(randomChainId ? { figurineChainId: randomChainId } : {}),
+          ...(randomClaspId ? { figurineClaspId: randomClaspId } : {}),
         });
         return result.mood;
       },
@@ -484,14 +684,20 @@ export const useConfigurator = create<ConfiguratorState>()(
           sizeLabel: DEFAULT_SIZE,
           components: [],
           figurine: null,
+          figurineChainId: DEFAULT_CHAIN_ID,
+          figurineClaspId: DEFAULT_CLASP_ID,
           step: 'beads',
           selectedComponent: null,
           draftTitle: '',
           draftIntention: '',
+          // Reset is the explicit "clean slate" action — drop the
+          // per-atelier stash so re-entering an atelier starts fresh.
+          ateliersStash: {},
         }),
 
       save: (title, intention) => {
         const state = get();
+        const isKawaii = state.atelierId === 'atelier_kawaii';
         const design: BraceletConfig = {
           id: uid('design'),
           atelierId: state.atelierId,
@@ -499,6 +705,11 @@ export const useConfigurator = create<ConfiguratorState>()(
           sizeCm: state.sizeCm,
           components: state.components,
           figurine: state.figurine,
+          // Only persist the attachment ids when they're meaningful
+          // (Kawaii + figurine present). Otherwise omit so non-Kawaii
+          // designs stay clean and round-trip identically.
+          figurineChainId: isKawaii && state.figurine ? state.figurineChainId : undefined,
+          figurineClaspId: isKawaii && state.figurine ? state.figurineClaspId : undefined,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           title,
@@ -529,6 +740,9 @@ export const useConfigurator = create<ConfiguratorState>()(
               slotId: uid('s'),
               kind: component.kind,
               refId: component.refId,
+              // Preserve the orientation flag so a shared/recovered
+              // design renders identically to the sender's bracelet.
+              ...(component.flipped ? { flipped: true } : {}),
             }));
           const nextFigurine =
             design.figurine && CHARM_BY_ID[design.figurine.refId]
@@ -539,12 +753,26 @@ export const useConfigurator = create<ConfiguratorState>()(
                 }
               : null;
 
+          // Hydrate attachments from the shared payload, falling back
+          // to defaults when missing or when the catalogue no longer
+          // recognises the id (graceful migration).
+          const chainId =
+            design.figurineChainId && CHAIN_BY_ID[design.figurineChainId]
+              ? design.figurineChainId
+              : DEFAULT_CHAIN_ID;
+          const claspId =
+            design.figurineClaspId && CLASP_BY_ID[design.figurineClaspId]
+              ? design.figurineClaspId
+              : DEFAULT_CLASP_ID;
+
           return {
             atelierId,
             sizeCm,
             sizeLabel: deriveSizeLabel(atelierId, sizeCm),
             components,
             figurine: nextFigurine,
+            figurineChainId: chainId,
+            figurineClaspId: claspId,
             selectedComponent: null,
             step: 'beads',
             draftTitle: design.title ?? '',
@@ -555,12 +783,22 @@ export const useConfigurator = create<ConfiguratorState>()(
       loadDesign: (id) => {
         const design = get().savedDesigns.find((d) => d.id === id);
         if (!design) return;
+        const chainId =
+          design.figurineChainId && CHAIN_BY_ID[design.figurineChainId]
+            ? design.figurineChainId
+            : DEFAULT_CHAIN_ID;
+        const claspId =
+          design.figurineClaspId && CLASP_BY_ID[design.figurineClaspId]
+            ? design.figurineClaspId
+            : DEFAULT_CLASP_ID;
         set({
           atelierId: design.atelierId,
           sizeCm: design.sizeCm,
           sizeLabel: design.sizeLabel,
           components: design.components,
           figurine: design.figurine ?? null,
+          figurineChainId: chainId,
+          figurineClaspId: claspId,
           selectedComponent: null,
           step: 'beads',
           draftTitle: design.title ?? '',
@@ -588,6 +826,7 @@ export function snapshotConfig(
   fulfillmentMode: FulfillmentMode = 'assembled-paris',
 ): BraceletConfig {
   const now = new Date().toISOString();
+  const isKawaii = state.atelierId === 'atelier_kawaii';
   return {
     id: uid('design'),
     atelierId: state.atelierId,
@@ -595,6 +834,11 @@ export function snapshotConfig(
     sizeCm: state.sizeCm,
     components: state.components,
     figurine: state.figurine,
+    // Attachment ids are only meaningful for Kawaii + with a figurine.
+    // We snapshot them so the artisan knows which chain/clasp to use
+    // when assembling the order.
+    figurineChainId: isKawaii && state.figurine ? state.figurineChainId : undefined,
+    figurineClaspId: isKawaii && state.figurine ? state.figurineClaspId : undefined,
     createdAt: now,
     updatedAt: now,
     title,
@@ -609,6 +853,14 @@ export function resolveBead(id: string): Bead | undefined {
 }
 export function resolveCharm(id: string): Charm | undefined {
   return CHARM_BY_ID[id];
+}
+export function resolveChain(id: string | null | undefined) {
+  if (!id) return undefined;
+  return CHAIN_BY_ID[id];
+}
+export function resolveClasp(id: string | null | undefined) {
+  if (!id) return undefined;
+  return CLASP_BY_ID[id];
 }
 
 /* ────────────────────────────────────────────────────────────────

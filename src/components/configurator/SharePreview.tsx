@@ -59,7 +59,11 @@ function shareItems(components: BraceletComponent[], sizeCm: number): ShareItem[
   const span = Math.PI * 1.84;
 
   return components.map((component, index) => {
-    const fraction = components.length === 1 ? 0.5 : index / components.length;
+    // Symmetric placement : items sit at the centers of N equal arc
+    // segments rather than at their edges. With (index + 0.5)/N the first
+    // and last items have equal margin from the cord endpoints, instead
+    // of clustering toward the start of the span.
+    const fraction = components.length === 1 ? 0.5 : (index + 0.5) / components.length;
     const angle = start + fraction * span;
     return {
       component,
@@ -177,13 +181,46 @@ export function SharePreview({
 }
 
 function ShareBead({ item }: { item: ShareItem }) {
-  const bead = item.component.kind === 'bead' ? BEAD_BY_ID[item.component.refId] : null;
-  const charm = item.component.kind === 'charm' ? CHARM_BY_ID[item.component.refId] : null;
+  const isCharm = item.component.kind === 'charm';
+  const bead = !isCharm ? BEAD_BY_ID[item.component.refId] : null;
+  const charm = isCharm ? CHARM_BY_ID[item.component.refId] : null;
   const image = bead?.images[0] ?? charm?.images[0];
-  const boxRadius = item.radius * PHOTO_ZOOM;
 
+  // Charms are pendants : anchored at the cord position (anneau hole on
+  // the cord), body hanging straight DOWN — no rotation. Beads are
+  // centered on the cord with their drilled hole aligned to the tangent
+  // (matches the editor's BraceletPreview).
+  if (isCharm) {
+    const charmHalf = item.radius * PHOTO_ZOOM * 0.85;
+    const charmSize = charmHalf * 2;
+    const anneauOffset = charmSize * 0.1;
+    return (
+      <g transform={`translate(${fmt(item.x)} ${fmt(item.y)})`}>
+        {image ? (
+          <image
+            href={image}
+            x={-charmHalf}
+            y={-anneauOffset}
+            width={charmSize}
+            height={charmSize}
+            preserveAspectRatio="xMidYMid meet"
+          />
+        ) : (
+          <circle r={item.radius * 0.62} fill="#7CADA6" stroke="#FFFFFF" strokeWidth="2" />
+        )}
+      </g>
+    );
+  }
+
+  const boxRadius = item.radius * PHOTO_ZOOM;
+  // Same flip-on-tangent behaviour as the live BraceletPreview : add
+  // 180° to the per-bead rotation so a heart/star/bow rendered upside
+  // down in the editor stays upside down on the share card.
+  const flipOffset = item.component.flipped ? 180 : 0;
   return (
-    <g transform={`translate(${fmt(item.x)} ${fmt(item.y)}) rotate(${fmt(item.rotation)})`}>
+    <g
+      transform={`translate(${fmt(item.x)} ${fmt(item.y)}) rotate(${fmt(item.rotation + flipOffset)})`}
+    >
       {image ? (
         <image
           href={image}

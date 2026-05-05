@@ -164,11 +164,13 @@ interface BraceletConfig {
   sizeCm: number;                                  // 17, 19, 16.5…
   components: BraceletComponent[];                 // ce qui est sur le fil
   figurine: BraceletComponent | null;              // hors fil (Kawaii uniquement)
+  figurineChainId?: string | null;                 // id AttachmentChain — Kawaii + figurine
+  figurineClaspId?: string | null;                 // id AttachmentClasp — Kawaii + figurine
   createdAt: ISODate;
   updatedAt: ISODate;
   title?: string;                                  // "Pure Nacre" donné par le client
   intention?: string;                              // petit mot facultatif
-  fulfillmentMode?: 'assembled-paris' | 'diy-kit';
+  fulfillmentMode?: 'assembled-paris' | 'diy-kit'; // forcé à 'assembled-paris' pour Kawaii
   price: Euros;                                    // calculé front-side
 }
 
@@ -176,8 +178,17 @@ interface BraceletComponent {
   slotId: string;                                  // id local pour React keys
   kind: 'bead' | 'charm';
   refId: UUID;                                     // id de la perle / charm dans le catalogue
+  flipped?: boolean;                               // rotation +180° supplémentaire (perles asymétriques)
 }
 ```
+
+> 🔄 **`flipped` (BraceletComponent)** : ajoute +180° à la rotation
+> appliquée à la photo de la perle. N'a d'effet visible que pour les
+> formes asymétriques (cœur, étoile, nœud, fleur) où le PNG est
+> shooté avec une orientation fixe — l'utilisateur peut alors
+> retourner la perle (ex. cœur pointe en bas → en haut) via le bouton
+> Flip dans la popup ou la tray "Réorganiser". Préservé dans les
+> snapshots panier + URLs partagées.
 
 > 📌 **`components` est dense et ordonné**. La position dans l'array = la
 > position physique sur le fil. La somme des `sizeMm` de chaque composant =
@@ -267,9 +278,71 @@ interface Charm {
   sizeMm: number;            // largeur dans le sens du fil (mm)
   renderSize?: number;
   licensed?: 'sanrio' | 'disney';   // déclenche surcharge
-  surcharge?: Euros;                // typiquement 6 € pour Sanrio/Disney
+  surcharge?: Euros;                // typiquement 6 € pour Sanrio/Disney —
+                                    // ajouté à CHAQUE pose, toujours
+  extraFee?: Euros;                 // supplément facturé UNIQUEMENT au-delà
+                                    // de `atelier.maxCharms` (entrée de
+                                    // gamme = 1 €, premium = 3 €).
+                                    // Fallback : DEFAULT_EXTRA_CHARM_FEE = 1
 }
 ```
+
+> ⚠️ `surcharge` et `extraFee` sont **deux champs distincts**, calculés
+> indépendamment dans `priceOf()`. `surcharge` s'applique à chaque pose
+> (licence) ; `extraFee` ne s'applique qu'aux charms en surplus (au-delà
+> du quota inclus). Un même charm peut combiner les deux (rare).
+
+### `AttachmentChain` & `AttachmentClasp` (Kawaii uniquement)
+
+Le bracelet Kawaii relie sa figurine à la corde via DEUX accessoires
+photographiés indépendamment :
+
+```ts
+type ChainColor = 'black' | 'orange' | 'red';
+
+interface AttachmentChain {
+  id: UUID;                  // ex. 'attach_chain_red' — DOIT matcher le filename
+  name: string;              // ex. 'Chaîne rouge'
+  color: ChainColor;
+  hex: string;               // couleur swatch dans le picker
+  images: string[];          // rempli par sync:attachments
+}
+
+type ClaspShape = 'round' | 'heart';
+
+interface AttachmentClasp {
+  id: UUID;                  // ex. 'attach_clasp_heart_blue'
+  name: string;
+  shape: ClaspShape;         // anneau ou cœur (pois sur les cœurs)
+  hex: string;               // teinte du corps (swatch)
+  dotsHex?: string;          // teinte des pois (informationnel uniquement)
+  images: string[];
+}
+```
+
+**Stockage des fichiers** : `public/photos/attachments/<id>.png` —
+**un seul dossier** pour les chaînes et les anneaux (le `kind` est
+porté par la convention `id` : `attach_chain_*` vs `attach_clasp_*`).
+
+**Choix utilisateur** : persistés sur `BraceletConfig` :
+- `figurineChainId?: string`
+- `figurineClaspId?: string`
+
+Les deux ne sont snapshottés que si l'atelier est Kawaii **ET** une
+figurine a été choisie. Sinon ils sont `undefined` dans le payload du
+panier — ne PAS s'attendre à les voir sur du Classique / Bracelet Bar.
+
+**Pricing** : ces accessoires sont inclus dans le prix de l'atelier
+(24 €) — aucun surcoût aujourd'hui. Le couple chaîne+anneau est offert
+en personnalisation gratuite.
+
+**Catalogue actuel** :
+- Chaînes : rouge, orange, noir
+- Anneaux : rond jaune, rond vert, cœur bleu à pois jaunes, cœur orange à pois blancs
+
+Pour ajouter un coloris : drop le PNG dans `public/photos/attachments/`,
+ajouter l'entrée correspondante dans `src/lib/mocks/attachments.ts`,
+puis `npm run sync:attachments`.
 
 ---
 
@@ -303,8 +376,12 @@ public/photos/
 │   └── ...
 ├── charms/               ← charms ICI (Classique)
 │   └── charm_xxx.png
-└── figurines/            ← figurines ICI (Kawaii)
-    └── charm_figurine_signature.png
+├── figurines/            ← figurines ICI (Kawaii)
+│   └── charm_figurine_signature.png
+└── attachments/          ← chaînes + anneaux ICI (Kawaii)
+    ├── attach_chain_red.png
+    ├── attach_clasp_round_yellow.png
+    └── attach_clasp_heart_blue.png
 ```
 
 #### Étape 3 — Lancer le sync
@@ -322,6 +399,18 @@ Le script Python `scripts/sync_beads.py` :
 #### Étape 4 — Pour les charms / figurines
 Pareil, mais avec `npm run sync:charms` (qui scanne **les deux dossiers**
 `charms/` et `figurines/`).
+
+#### Étape 4 bis — Pour les attaches Kawaii (chaîne / anneau)
+`npm run sync:attachments` scanne `public/photos/attachments/`. Les `id`
+doivent suivre la convention :
+- `attach_chain_<color>` (chaîne à billes)
+- `attach_clasp_<shape>_<color>` (anneau ou cœur)
+
+Exemple : `attach_clasp_heart_orange.png` ↔ `id: 'attach_clasp_heart_orange'`
+dans `src/lib/mocks/attachments.ts`.
+
+#### Étape 4 ter — Tout d'un coup
+`npm run sync:all` enchaîne les trois sync (beads + charms + attachments).
 
 #### Étape 5 — Vérifier
 ```bash
@@ -502,22 +591,40 @@ actuellement. Le bracelet coûte `atelier.price` quoi qu'il arrive.
 > `Kit.charms[]`), où on agrège les prix des perles incluses pour calculer le
 > coût matière (info éditoriale, pas affichée au client).
 
-### Surcharge (Sanrio/Disney)
-`Charm.surcharge?` — typiquement 6 €. S'ajoute à `atelier.price` quand le
-client choisit une figurine licenciée. C'est implémenté côté front dans
-`priceOf()` (`src/lib/store/configurator.ts`).
+### Surcharge (Sanrio/Disney) — `Charm.surcharge?`
+Typiquement 6 €. S'ajoute à `atelier.price` à **chaque pose** d'un charm
+ou d'une figurine portant ce champ (peu importe combien d'autres charms
+sont sur le bracelet). Implémenté côté front dans `priceOf()`
+(`src/lib/store/configurator.ts`).
+
+### Charms supplémentaires — `Charm.extraFee?`
+Le Classique inclut `atelier.maxCharms = 3` charms gratuits. Au-delà, le
+client peut continuer à ajouter des charms (tant que le fil le permet),
+chacun facturé à son **propre `extraFee`** :
+
+- Charm entrée de gamme (Tour Eiffel, lettre simple) : `extraFee: 1`
+- Charm premium (médaille gravée, motif élaboré) : `extraFee: 3`
+- Si `extraFee` non défini : fallback à `DEFAULT_EXTRA_CHARM_FEE = 1 €`
+  (constante exportée par `configurator.ts`)
+
+L'ordre sur le fil détermine quels charms sont en surplus : les
+`maxCharms` premiers sont gratuits, les suivants sont facturés. Le
+helper `extraCharmsFee(atelierId, components)` somme la note.
 
 ### Calcul actuel (front)
 ```ts
 function priceOf(atelierId, sizeLabel, components, figurine) {
   let base = ATELIER_BY_ID[atelierId].price;
-  // Sum of charm/figurine surcharges (only Sanrio/Disney charge extra today)
-  for (const c of components) {
+  // 1) Surcharge fixe (Sanrio / Disney) — chaque pose
+  for (const c of components ?? []) {
     if (c.kind === 'charm') {
       const charm = CHARM_BY_ID[c.refId];
       if (charm?.surcharge) base += charm.surcharge;
     }
   }
+  // 2) Charms en surplus (au-delà du quota atelier) — par-charm extraFee
+  base += extraCharmsFee(atelierId, components ?? []);
+  // 3) Figurine attachée (Kawaii) — surcharge fixe
   if (figurine) {
     const charm = CHARM_BY_ID[figurine.refId];
     if (charm?.surcharge) base += charm.surcharge;
@@ -558,12 +665,22 @@ de référence.
 - **1 figurine max** (`maxCharms: 1`), catégorie `kawaii / fleur / coeur / etoile / noeud / animal`
 - Onglets visibles : **Perles** + **Figurines**
 - La figurine n'est **pas sur le fil** : elle s'attache à côté (rendue à gauche du bracelet en preview)
+- **Toujours assemblée à Paris** (le fil mémoire est trop technique à fermer chez soi) — `fulfillmentMode` est forcé à `'assembled-paris'` côté front, le toggle DIY/Assemblé n'est pas affiché
+- **Système d'attache figurine ↔ bracelet** : 2 catalogues séparés
+  - `AttachmentChain` (ex. `attach_chain_red`) : petite chaîne à billes colorée
+  - `AttachmentClasp` (ex. `attach_clasp_heart_blue`) : anneau ou cœur de fermeture
+  - Choix utilisateur snapshotté dans `BraceletConfig.figurineChainId` / `figurineClaspId`
+  - Cf. section **§4 ter** ci-dessous pour le modèle complet
 
 ### Classique (`atelier_classique`) — 36 €
 - Fil élastique
 - Sizing user-pick : S/M/L + perso
 - **Familles autorisées** : toutes (= `STANDARD_BEAD_FAMILIES`)
-- **3 charms max** (`maxCharms: 3`), catégories `lettre / symbole / lune`
+- **3 charms inclus** (`maxCharms: 3`), catégories `lettre / symbole / lune`
+- **Charms supplémentaires autorisés** au-delà des 3 inclus, facturés
+  au `extraFee` de chaque charm (1 € entrée de gamme, 3 € premium ;
+  fallback 1 € si non spécifié). Seul le budget de longueur du fil
+  bloque structurellement l'ajout.
 - Onglets visibles : **Perles** + **Pierres** + **Charms** (3 colonnes)
   - **Perles** = familles `pearl` + `enamel` (constants `NON_STONE_FAMILIES`)
   - **Pierres** = 12 familles semi-précieuses (`STONE_FAMILIES`)
@@ -628,9 +745,31 @@ Elle ne contribue pas au budget de longueur (off-cord). Limite : 1 max.
 | Store front | localStorage key | Données | Doit aller en DB ? |
 |---|---|---|---|
 | `useCart` | `mnb-cart` | Lignes panier | **Oui** (sessions, paniers persistants par user) |
-| `useConfigurator` | `mnb-configurator-v8` | Atelier en cours, taille, components, figurine, draftTitle | **Partiellement** : draft à conserver, état de session OK en localStorage |
+| `useConfigurator` | `mnb-configurator-v8` | Atelier en cours, taille, components, figurine, attache (chain/clasp), `ateliersStash`, draftTitle | **Partiellement** : draft à conserver, état de session OK en localStorage |
 | `useGiftCards` | `mnb-gift-cards-v1` | Cards créées + active redemption | **Oui** (codes côté serveur évidemment) |
 | `useLang` | `mnb-lang` | FR/EN | Non, pure préférence UI |
+
+### `ateliersStash` — mémoire entre ateliers
+Quand l'utilisateur change d'atelier via le canvas, son state courant
+(components, figurine, sizeCm, draftTitle, attache Kawaii…) est snapshotté
+dans `ateliersStash[ancienAtelierId]`. S'il revient sur cet atelier plus
+tard, on restore tel quel — le canvas n'est pas remis à zéro.
+
+```ts
+type AtelierStash = {
+  components: BraceletComponent[];
+  figurine: BraceletComponent | null;
+  sizeCm: number;
+  sizeLabel: SizeLabel;
+  draftTitle: string;
+  draftIntention: string;
+  figurineChainId: string | null;
+  figurineClaspId: string | null;
+};
+```
+
+`reset()` (action explicite "Recommencer") vide la stash → repart sur du
+neuf pour tous les ateliers.
 
 ### Note sur les migrations Zustand
 Les keys ont des suffixes versionnés (`-v8`, `-v1`). Si on change le shape du
@@ -675,8 +814,8 @@ Interpolation : `{0}`, `{1}` dans le message FR/EN, params passés à `t()`.
 
 ```ts
 t('charm.subtitle.classicPlural', 3)
-// → FR : "Optionnel. Jusqu'à 3 charms."
-// → EN : "Optional. Up to 3 charms."
+// → FR : "Optionnel. 3 charms inclus."
+// → EN : "Optional. 3 charms included."
 ```
 
 ### Conversion d'unités
@@ -877,6 +1016,30 @@ l'instant on n'utilise que `images[0]`. Le sync script remplit toujours
    ```
 2. Drop `charm_figurine_hello_kitty.png` dans `public/photos/figurines/`
 3. `npm run sync:charms`
+
+### Q7bis — Comment ajouter un nouveau charm Classique (avec son `extraFee`) ?
+1. Entrée dans `src/lib/mocks/charms.ts` :
+   ```ts
+   {
+     id: 'charm_medaille_gravee',
+     name: 'Médaille gravée',
+     category: 'symbole',
+     material: 'argente',
+     kind: 'charm',                   ← !! pas 'figurine' (= Kawaii)
+     sizeMm: 2,                       ← 2 mm : seul l'anneau d'accroche compte
+     price: 8,                        ← prix indicatif catalogue
+     stock: 60,
+     description: '…',
+     images: [],
+     extraFee: 3,                     ← charm "premium" : +3 € au-delà du quota
+   }
+   ```
+2. Drop `charm_medaille_gravee.png` dans `public/photos/charms/`
+3. `npm run sync:charms`
+
+Le Classique inclut 3 charms gratuits (`atelier.maxCharms = 3`). À partir
+du 4ᵉ, chaque charm est facturé à son `extraFee` propre. Si tu omets le
+champ : fallback à `DEFAULT_EXTRA_CHARM_FEE = 1 €`.
 
 ### Q8 — Y a-t-il des tests ?
 Oui (`vitest`), partiels. `src/lib/store/configurator.test.ts` et

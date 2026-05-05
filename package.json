@@ -12,7 +12,8 @@
     "test:e2e": "playwright test",
     "sync:beads": "python scripts/sync_beads.py",
     "sync:charms": "python scripts/sync_charms.py",
-    "sync:all": "python scripts/sync_beads.py && python scripts/sync_charms.py",
+    "sync:attachments": "python scripts/sync_attachments.py",
+    "sync:all": "python scripts/sync_beads.py && python scripts/sync_charms.py && python scripts/sync_attachments.py",
     "detour:bead": "python scripts/detour_bead.py"
   },
   "dependencies": {

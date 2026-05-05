@@ -3,12 +3,19 @@
 import { useMemo, useState } from 'react';
 import { CHARMS } from '@/lib/mocks/charms';
 import { ATELIER_BY_ID } from '@/lib/mocks/ateliers';
-import { useConfigurator, canFit, countCharms } from '@/lib/store/configurator';
+import {
+  useConfigurator,
+  canFit,
+  countCharms,
+  extraCharmsFee,
+} from '@/lib/store/configurator';
+import { formatPrice } from '@/lib/utils/format';
 import { CharmGlyph } from '@/components/ui/CharmGlyph';
 import type { CharmCategory } from '@/types';
 import { haptic } from '@/lib/utils/feedback';
 import { useT } from '@/lib/i18n/use-t';
 import { cn } from '@/lib/utils/cn';
+import { AttachmentPicker } from './AttachmentPicker';
 
 interface CharmPickerProps {
   onTilePointerDown?: (refId: string, e: React.PointerEvent) => void;
@@ -50,9 +57,19 @@ export function CharmPicker({ onTilePointerDown }: CharmPickerProps = {}) {
   const isKawaii = atelier?.id === 'atelier_kawaii';
   const charmsCount = isKawaii ? (figurine ? 1 : 0) : countCharms(components);
   const max = atelier?.maxCharms ?? 0;
-  // For Kawaii, picking a figurine REPLACES the current one — so no count limit.
-  // For Classique, charms are appended on the cord and capped by maxCharms.
-  const atCountLimit = !isKawaii && charmsCount >= max;
+  // For Kawaii, picking a figurine REPLACES the current one — count
+  // never exceeds 1. For Classique, the first `max` charms are included
+  // in the price ; each one beyond that bumps the total by its own
+  // `extraFee` (catalogue-defined, 1 € entry / 3 € premium ; fallback
+  // DEFAULT_EXTRA_CHARM_FEE) — see priceOf / extraCharmsFee in the
+  // configurator store. The structural cap is the cord-length budget,
+  // surfaced via canFit().
+  const isOverIncluded = !isKawaii && charmsCount >= max;
+  const extraCharms = !isKawaii ? Math.max(0, charmsCount - max) : 0;
+  // The exact surcharge depends on which charms are in the surplus —
+  // each catalogue entry can declare its own `extraFee`. We delegate to
+  // the store helper so the picker stays in sync with priceOf().
+  const extraFee = !isKawaii ? extraCharmsFee(atelierId, components) : 0;
 
   if (!atelier?.allowCharms) {
     return (
@@ -74,16 +91,32 @@ export function CharmPicker({ onTilePointerDown }: CharmPickerProps = {}) {
               ? t('charm.subtitle.kawaii')
               : t(max > 1 ? 'charm.subtitle.classicPlural' : 'charm.subtitle.classicSingular', max)}
           </p>
-        </div>
-        <div
-          className={cn(
-            'shrink-0 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest tabular-nums',
-            atCountLimit
-              ? 'bg-[#3D5A73] text-white'
-              : 'bg-[#F5F0E8] text-[#2D3748] border border-[#EEE9E0]',
+          {/* Per-charm extra fees vary by catalogue entry (Tour Eiffel
+              +1 €, médaille gravée +3 €, …) so we don't advertise a flat
+              rate up-front. We only surface the running surcharge once
+              the user is actually over the included count. */}
+          {!isKawaii && extraCharms > 0 && (
+            <p className="mt-1 text-[12px] text-[#3D5A73]">
+              {t('charm.surcharge.active', extraCharms, formatPrice(extraFee))}
+            </p>
           )}
-        >
-          {charmsCount}/{max}
+        </div>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <div
+            className={cn(
+              'px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest tabular-nums',
+              isOverIncluded
+                ? 'bg-[#3D5A73] text-white'
+                : 'bg-[#F5F0E8] text-[#2D3748] border border-[#EEE9E0]',
+            )}
+          >
+            {charmsCount}/{max}
+          </div>
+          {extraCharms > 0 && (
+            <div className="px-2 py-0.5 rounded-full bg-[#F4E8D8] text-[#8B5A2B] text-[10px] font-black uppercase tracking-widest tabular-nums">
+              +{formatPrice(extraFee)}
+            </div>
+          )}
         </div>
       </div>
 
@@ -121,7 +154,9 @@ export function CharmPicker({ onTilePointerDown }: CharmPickerProps = {}) {
               // For Kawaii figurines : no length budget (figurine is off-cord),
               // no count limit either (clicking just replaces the current one).
               const fits = isKawaii ? true : canFit(atelierId, sizeCm, components, charm.sizeMm);
-              const disabled = atCountLimit || !fits;
+              // Tiles are only disabled when the cord can't fit one more
+              // — over-cap is handled by surcharge, not by blocking.
+              const disabled = !fits;
               const isSelected = isKawaii && figurine?.refId === charm.id;
               return (
                 <button
@@ -175,6 +210,11 @@ export function CharmPicker({ onTilePointerDown }: CharmPickerProps = {}) {
           </div>
         )}
       </div>
+
+      {/* Kawaii-only : the figurine attachment system (chain colour +
+          snap ring/heart). Sits below the figurine grid so the
+          attache choice is co-located with what it attaches to. */}
+      {isKawaii && <AttachmentPicker />}
     </div>
   );
 }

@@ -66,6 +66,7 @@ const FR: Dict = {
   'configurator.restart': 'Recommencer',
   'configurator.reorganize': 'Réorganiser',
   'configurator.remove': 'Retirer',
+  'configurator.flip': 'Pivoter à 180°',
 
   // Tabs / palette
   'tabs.beads': 'Perles',
@@ -250,6 +251,7 @@ const FR: Dict = {
   'composition.bead': 'Perle',
   'composition.moveLeft': 'Déplacer vers la gauche',
   'composition.moveRight': 'Déplacer vers la droite',
+  'composition.flip': 'Pivoter à 180°',
   'composition.remove': 'Retirer',
 
   // Bead picker
@@ -282,8 +284,19 @@ const FR: Dict = {
   'charm.title.kawaii': 'Ajoutez une figurine',
   'charm.title.classic': 'Ajoutez des charms',
   'charm.subtitle.kawaii': 'Optionnel. Une figurine vient se fixer à côté du bracelet.',
-  'charm.subtitle.classicSingular': 'Optionnel. Jusqu’à {0} charm.',
-  'charm.subtitle.classicPlural': 'Optionnel. Jusqu’à {0} charms.',
+  'charm.subtitle.classicSingular': 'Optionnel. {0} charm inclus.',
+  'charm.subtitle.classicPlural': 'Optionnel. {0} charms inclus.',
+  'charm.surcharge.active': '{0} charm(s) en supplément · +{1}',
+
+  // Attachment system (Kawaii) — chain + clasp linking the figurine
+  'attach.chain.title': 'Chaîne d’attache',
+  'attach.chain.subtitle': 'La petite chaîne à billes qui relie la figurine au bracelet.',
+  'attach.chain.count': '{0} couleurs',
+  'attach.chain.choose': 'Choisir cette chaîne',
+  'attach.clasp.title': 'Anneau d’accroche',
+  'attach.clasp.subtitle': 'L’attache qui ferme la chaîne sur le fil — ronde ou en cœur.',
+  'attach.clasp.count': '{0} modèles',
+  'attach.clasp.choose': 'Choisir cet anneau',
   'charm.notAvailable': 'Cet atelier ne comprend pas de charms.',
   'charm.category.label': 'Catégorie',
   'charm.category.all': 'Tous',
@@ -390,6 +403,7 @@ const EN: Dict = {
   'configurator.restart': 'Restart',
   'configurator.reorganize': 'Reorganize',
   'configurator.remove': 'Remove',
+  'configurator.flip': 'Rotate 180°',
 
   // Tabs / palette
   'tabs.beads': 'Beads',
@@ -574,6 +588,7 @@ const EN: Dict = {
   'composition.bead': 'Bead',
   'composition.moveLeft': 'Move left',
   'composition.moveRight': 'Move right',
+  'composition.flip': 'Rotate 180°',
   'composition.remove': 'Remove',
 
   // Bead picker
@@ -604,8 +619,19 @@ const EN: Dict = {
   'charm.title.kawaii': 'Add a figurine',
   'charm.title.classic': 'Add charms',
   'charm.subtitle.kawaii': 'Optional. A figurine attaches next to the bracelet.',
-  'charm.subtitle.classicSingular': 'Optional. Up to {0} charm.',
-  'charm.subtitle.classicPlural': 'Optional. Up to {0} charms.',
+  'charm.subtitle.classicSingular': 'Optional. {0} charm included.',
+  'charm.subtitle.classicPlural': 'Optional. {0} charms included.',
+  'charm.surcharge.active': '{0} extra charm(s) · +{1}',
+
+  // Attachment system (Kawaii) — chain + clasp linking the figurine
+  'attach.chain.title': 'Attachment chain',
+  'attach.chain.subtitle': 'The tiny ball-chain that links the figurine to the bracelet.',
+  'attach.chain.count': '{0} colors',
+  'attach.chain.choose': 'Pick this chain',
+  'attach.clasp.title': 'Snap ring',
+  'attach.clasp.subtitle': 'The clasp that closes the chain onto the wire — round or heart.',
+  'attach.clasp.count': '{0} styles',
+  'attach.clasp.choose': 'Pick this clasp',
   'charm.notAvailable': 'This workshop does not include charms.',
   'charm.category.label': 'Category',
   'charm.category.all': 'All',

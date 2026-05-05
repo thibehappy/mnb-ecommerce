@@ -1,6 +1,13 @@
 'use client';
 
-import { ArrowLeft, ArrowRight, GripHorizontal, Sparkles, Trash2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  FlipVertical2,
+  GripHorizontal,
+  Sparkles,
+  Trash2,
+} from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { BraceletComponent } from '@/types';
 import { StoneSwatch } from '@/components/ui/StoneSwatch';
@@ -19,6 +26,7 @@ interface CompositionTrayProps {
   onSelect: (slotId: string | null) => void;
   onMove: (from: number, to: number) => void;
   onRemove: (slotId: string) => void;
+  onFlip: (slotId: string) => void;
 }
 
 export function CompositionTray({
@@ -28,6 +36,7 @@ export function CompositionTray({
   onSelect,
   onMove,
   onRemove,
+  onFlip,
 }: CompositionTrayProps) {
   const totalPieces = components.length + (figurine ? 1 : 0);
   const { t, lang } = useT();
@@ -98,7 +107,16 @@ export function CompositionTray({
 
                 <div />
 
-                <div className="mt-3 grid grid-cols-3 gap-1.5">
+                {/* 4 columns when the component is a flippable bead, 3
+                    columns for charms (no flip — they hang from the
+                    anneau and would point upward, which we don't
+                    expose). */}
+                <div
+                  className={cn(
+                    'mt-3 grid gap-1.5',
+                    component.kind === 'bead' ? 'grid-cols-4' : 'grid-cols-3',
+                  )}
+                >
                   <IconButton
                     label={t('composition.moveLeft')}
                     disabled={index === 0}
@@ -106,6 +124,15 @@ export function CompositionTray({
                   >
                     <ArrowLeft size={12} strokeWidth={2.3} />
                   </IconButton>
+                  {component.kind === 'bead' && (
+                    <IconButton
+                      label={t('composition.flip')}
+                      active={component.flipped === true}
+                      onClick={() => onFlip(component.slotId)}
+                    >
+                      <FlipVertical2 size={12} strokeWidth={2.2} />
+                    </IconButton>
+                  )}
                   <IconButton
                     label={t('composition.remove')}
                     danger
@@ -265,12 +292,15 @@ function IconButton({
   label,
   disabled,
   danger,
+  active,
   onClick,
   children,
 }: {
   label: string;
   disabled?: boolean;
   danger?: boolean;
+  /** Highlights the button as a "currently on" toggle (used by Flip). */
+  active?: boolean;
   onClick: () => void;
   children: ReactNode;
 }) {
@@ -278,13 +308,17 @@ function IconButton({
     <button
       type="button"
       aria-label={label}
+      aria-pressed={active}
+      title={label}
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        'inline-flex h-8 items-center justify-center rounded-lg border text-[#3D5A73] transition-colors disabled:cursor-not-allowed disabled:opacity-30',
+        'inline-flex h-8 items-center justify-center rounded-lg border transition-colors disabled:cursor-not-allowed disabled:opacity-30',
         danger
           ? 'border-[#F3D0C8] bg-[#FFF1EE] text-[#A4473E] hover:bg-[#F8DCD5]'
-          : 'border-[#EEE9E0] bg-white hover:border-[#3D5A73]',
+          : active
+            ? 'border-[#3D5A73] bg-[#3D5A73] text-white hover:bg-[#2D3748]'
+            : 'border-[#EEE9E0] bg-white text-[#3D5A73] hover:border-[#3D5A73]',
       )}
     >
       {children}

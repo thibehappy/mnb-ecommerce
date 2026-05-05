@@ -11,9 +11,21 @@ import { CHARM_PHOTOS } from './charm-photos.generated';
  *                  PNG dans public/photos/figurines/<id>.png
  *                  Si licensed: 'sanrio' | 'disney' → ajouter surcharge: 6 €.
  *
- * À ce jour le catalogue est volontairement vide :
- *   - Les vrais charms (lettres / médailles / lunes) ne sont pas encore shootés
- *   - Aucune figurine licenciée Sanrio / Disney n'est encore référencée
+ * Tarification — deux champs distincts (NE PAS CONFONDRE) :
+ *   • `surcharge?` : supplément ajouté à CHAQUE pose, peu importe le contexte
+ *                    (ex. licence Sanrio/Disney = +6 € systématique).
+ *   • `extraFee?`  : supplément ajouté UNIQUEMENT quand ce charm est posé
+ *                    AU-DELÀ du nombre inclus dans l'atelier (ex. Classique
+ *                    inclut 3 charms gratuits ; à partir du 4ᵉ on facture le
+ *                    `extraFee` propre du charm). Si omis, fallback sur
+ *                    `DEFAULT_EXTRA_CHARM_FEE` (1 €) — cf.
+ *                    `src/lib/store/configurator.ts`.
+ *                    Charms d'entrée de gamme : 1 €. Charms premium
+ *                    (médaille gravée, motif élaboré) : 3 €.
+ *
+ * À ce jour le catalogue est volontairement minimaliste :
+ *   - 1 figurine signature (placeholder, pas encore de PNG)
+ *   - 1 charm Tour Eiffel (Classique)
  *
  * Les anciennes formes émaillées (cœur, étoile, marguerite, nœuds) qu'on
  * appelait "figurines" sont en fait des perles : elles ont migré vers
@@ -23,6 +35,7 @@ import { CHARM_PHOTOS } from './charm-photos.generated';
  *   1. Drop le PNG détouré dans le dossier correspondant à son kind.
  *   2. `npm run sync:charms` regénère charm-photos.generated.ts.
  *   3. Ajouter l'entrée ci-dessous avec id matchant + kind matchant.
+ *   4. Définir `extraFee` selon le tier (1 € entrée de gamme / 3 € premium).
  */
 const CHARMS_RAW: Charm[] = [
   // ─── Figurines (Kawaii) ───
@@ -37,6 +50,27 @@ const CHARMS_RAW: Charm[] = [
     stock: 50,
     description: 'Figurine émaillée signature MyNiceBracelet.',
     images: [],
+  },
+
+  // ─── Charms Classique (s'insèrent entre les perles, attache fine) ───
+  {
+    id: 'charm_tour_eiffel',
+    name: 'Tour Eiffel',
+    category: 'symbole',
+    material: 'argente',
+    kind: 'charm',
+    // L'attache est très fine — ce qui consomme la circonférence du fil,
+    // c'est l'anneau d'accroche, pas le corps pendant. 2 mm pour s'insérer
+    // entre les perles sans déranger la composition.
+    sizeMm: 2,
+    price: 3.5,
+    stock: 80,
+    description: 'Tour Eiffel argentée, signature parisienne ajourée.',
+    images: [],
+    // Charm "entrée de gamme" : surcoût modéré quand il dépasse les 3
+    // charms inclus dans le Classique. Une médaille gravée ou une
+    // pièce premium serait à `extraFee: 3`.
+    extraFee: 1,
   },
 ];
 

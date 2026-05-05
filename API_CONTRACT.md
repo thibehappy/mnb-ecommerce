@@ -57,6 +57,8 @@ L'abstraction côté front est dans [`src/lib/api/index.ts`](./src/lib/api/index
 ### `Charm`
 - `category` conditionne la forme SVG placeholder — ne pas créer de nouvelle catégorie sans prévenir le front
 - `material` influence la couleur (dore / argente / email / pierre)
+- `surcharge` : supplément **systématique** (chaque pose). Réservé aux licences (Sanrio / Disney = 6 €)
+- `extraFee` : supplément facturé **uniquement** quand le charm dépasse le quota inclus de l'atelier (`atelier.maxCharms`). Tier classique : 1 € (entrée de gamme), 3 € (premium). Fallback : 1 € si le champ est absent
 
 ### `Kit`
 - `palette` (array de 4 hex) : utilisé par `KitVisual` pour générer les placeholders. À remplir même si les photos existent — sert aussi aux previews dans le panier.

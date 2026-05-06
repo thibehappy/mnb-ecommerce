@@ -45,6 +45,12 @@ function ellipseScale(sizeCm: number): number {
   return Math.max(0.45, Math.min(1, sizeCm / REFERENCE_SIZE_CM));
 }
 
+function tangentRotationDeg(angle: number, rx: number, ry: number): number {
+  const tx = -rx * Math.sin(angle);
+  const ty = ry * Math.cos(angle);
+  return (Math.atan2(ty, tx) * 180) / Math.PI + 90;
+}
+
 export function BraceletGlyph({
   components,
   figurine,
@@ -136,7 +142,7 @@ function computeItems(components: BraceletComponent[], sizeCm: number): GlyphIte
       component,
       x: CX + Math.cos(angle) * rx,
       y: CY + Math.sin(angle) * ry,
-      rotation: (angle * 180) / Math.PI + 90,
+      rotation: tangentRotationDeg(angle, rx, ry),
       radius: BEAD_RADIUS,
     };
   });

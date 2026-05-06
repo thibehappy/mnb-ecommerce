@@ -8,7 +8,7 @@ import {
   Sparkles,
   Trash2,
 } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import type { BraceletComponent } from '@/types';
 import { StoneSwatch } from '@/components/ui/StoneSwatch';
 import { CharmGlyph } from '@/components/ui/CharmGlyph';
@@ -41,6 +41,32 @@ export function CompositionTray({
   const totalPieces = components.length + (figurine ? 1 : 0);
   const { t, lang } = useT();
 
+  // Horizontal scroll container + per-card refs so the tray can
+  // auto-scroll to the active selection. When the user clicks a bead
+  // on the bracelet, the tray (if open) follows along — saves them a
+  // manual horizontal swipe to find what they just selected.
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const cardRefsRef = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  useEffect(() => {
+    if (!selectedSlotId) return;
+    const scroller = scrollerRef.current;
+    const card = cardRefsRef.current.get(selectedSlotId);
+    if (!scroller || !card) return;
+    // Compute the distance the card needs to travel to land at the
+    // horizontal centre of the scroller, then scroll smoothly. We do
+    // this manually instead of `scrollIntoView` to avoid any chance
+    // of the page scrolling alongside the tray.
+    const scrollerRect = scroller.getBoundingClientRect();
+    const cardRect = card.getBoundingClientRect();
+    const cardCenterRelative = cardRect.left - scrollerRect.left + cardRect.width / 2;
+    const scrollerCenter = scrollerRect.width / 2;
+    const delta = cardCenterRelative - scrollerCenter;
+    if (Math.abs(delta) > 1) {
+      scroller.scrollBy({ left: delta, behavior: 'smooth' });
+    }
+  }, [selectedSlotId]);
+
   return (
     <section className="mt-4 rounded-2xl border border-[#EEE9E0] bg-white p-4 shadow-sm md:p-5">
       <div className="mb-3 flex items-center justify-between gap-3">
@@ -63,7 +89,7 @@ export function CompositionTray({
           </div>
         </div>
       ) : (
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div ref={scrollerRef} className="flex gap-2 overflow-x-auto pb-1">
           {components.map((component, index) => {
             const item = componentInfo(component, t, lang);
             if (!item) return null;
@@ -72,6 +98,16 @@ export function CompositionTray({
             return (
               <div
                 key={component.slotId}
+                ref={(el) => {
+                  // Track each card's DOM node by slotId so the
+                  // auto-scroll effect can locate the active card
+                  // without re-querying the DOM.
+                  if (el) {
+                    cardRefsRef.current.set(component.slotId, el);
+                  } else {
+                    cardRefsRef.current.delete(component.slotId);
+                  }
+                }}
                 className={cn(
                   'grid w-[154px] shrink-0 grid-rows-[auto_1fr_auto] rounded-xl border bg-[#FBF8F2] p-2.5 transition-all',
                   active

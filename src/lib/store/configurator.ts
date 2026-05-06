@@ -578,14 +578,25 @@ export const useConfigurator = create<ConfiguratorState>()(
           const next = state.components.filter((_, i) => i !== idx);
           return {
             components: next,
+            // Auto-select a neighbour when the removed slot was the
+            // selected one : keeps the popup alive on the next bead
+            // so the user can keep deleting / flipping without
+            // re-selecting between each action. Falls back to null
+            // only when the cord is now empty.
             selectedComponent:
-              state.selectedComponent === removed.slotId ? null : state.selectedComponent,
+              state.selectedComponent === removed.slotId
+                ? next.length === 0
+                  ? null
+                  : next[Math.min(idx, next.length - 1)]!.slotId
+                : state.selectedComponent,
           };
         }),
 
       removeComponent: (slotId) =>
         set((state) => {
-          // Figurine slot ?
+          // Figurine slot ? It has no neighbour on the cord, so we
+          // just clear the selection when the figurine itself was
+          // selected — no auto-pick attempt.
           if (state.figurine && state.figurine.slotId === slotId) {
             return {
               figurine: null,
@@ -598,7 +609,13 @@ export const useConfigurator = create<ConfiguratorState>()(
           const next = state.components.filter((_, i) => i !== idx);
           return {
             components: next,
-            selectedComponent: state.selectedComponent === slotId ? null : state.selectedComponent,
+            // See removeAt above for the neighbour-selection rationale.
+            selectedComponent:
+              state.selectedComponent === slotId
+                ? next.length === 0
+                  ? null
+                  : next[Math.min(idx, next.length - 1)]!.slotId
+                : state.selectedComponent,
           };
         }),
 

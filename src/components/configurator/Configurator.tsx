@@ -611,14 +611,20 @@ export function Configurator() {
 
               {/* Selected component tooltip — pushed below the size selector
                   pill on non-Kawaii ateliers to avoid the overlap at top-right.
-                  Kawaii has no selector, so it can sit at the very top. */}
-              <AnimatePresence>
+                  Kawaii has no selector, so it can sit at the very top.
+                  `key={selectedComponent}` + `mode="wait"` make the popup
+                  fully exit and re-enter when the auto-select-neighbour
+                  flow swaps the selected slot after a delete. The tiny
+                  blink tells the user "you're now on a different bead"
+                  instead of looking like nothing happened. */}
+              <AnimatePresence mode="wait">
                 {selectedComponent && (
                   <motion.div
+                    key={selectedComponent}
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: 20, opacity: 0 }}
-                    transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                    exit={{ y: 12, opacity: 0 }}
+                    transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
                     className={cn(
                       'absolute right-2 md:right-3 z-10 bg-white rounded-xl p-3 flex items-center gap-2 shadow-xl border border-[#EEE9E0]',
                       atelier?.id === 'atelier_kawaii' ? 'top-2 md:top-3' : 'top-16 md:top-20',

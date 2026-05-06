@@ -801,15 +801,29 @@ export const BraceletPreview = forwardRef<BraceletPreviewHandle, Props>(function
 
           {/* Figurine attached to the bracelet — rendered NEXT TO the cord
              (not as a slot on it). Only Kawaii passes a figurine.
-             The chain + clasp are NOT rendered here ; they paint after
-             components.map below so they sit ON TOP of the topmost
-             bead on the left leg (cf. user feedback). */}
+             A small companion bubble below the figurine surfaces the
+             user's chain + clasp choice WITHOUT visually attaching
+             them to the bracelet : the artisan reads the snapshot
+             (figurineChainId + figurineClaspId) at order time, the
+             customer sees what they picked. */}
           {figurine &&
             (() => {
               const charm = CHARM_BY_ID[figurine.refId];
               if (!charm || !charm.images[0]) return null;
               const { cx: figCx, cy: figCy, r: figR } = figGeom;
               const isFigSelected = figurine.slotId === selectedSlotId;
+              const chain = figurineChainId ? CHAIN_BY_ID[figurineChainId] : undefined;
+              const clasp = figurineClaspId ? CLASP_BY_ID[figurineClaspId] : undefined;
+              const showAttachment =
+                variant === 'u' && Boolean(chain?.images[0] || clasp?.images[0]);
+              // Companion bubble dimensions. Centered horizontally on the
+              // figurine, offset down by halo + a small gap so the two
+              // bubbles read as a clean "info card stack".
+              const bubbleW = 220;
+              const bubbleH = 116;
+              const bubbleGap = 22;
+              const bubbleCy = figR + 18 + bubbleGap + bubbleH / 2;
+              const slotSize = bubbleH - 24; // square photo slots inside
               return (
                 <g
                   transform={`translate(${figCx}, ${figCy})`}
@@ -851,6 +865,59 @@ export const BraceletPreview = forwardRef<BraceletPreviewHandle, Props>(function
                   </g>
                   {isFigSelected && (
                     <circle r={figR + 4} fill="none" stroke="#3D5A73" strokeWidth="2" />
+                  )}
+
+                  {/* Attachment companion bubble — shows the chosen
+                      chain (left half) and clasp (right half) below
+                      the figurine. White rounded rect with the same
+                      dashed border style as the halo for visual
+                      consistency. */}
+                  {showAttachment && (
+                    <g pointerEvents="none">
+                      <rect
+                        x={-bubbleW / 2}
+                        y={bubbleCy - bubbleH / 2}
+                        width={bubbleW}
+                        height={bubbleH}
+                        rx={22}
+                        ry={22}
+                        fill="#FFFFFF"
+                        fillOpacity="0.9"
+                      />
+                      <rect
+                        x={-bubbleW / 2}
+                        y={bubbleCy - bubbleH / 2}
+                        width={bubbleW}
+                        height={bubbleH}
+                        rx={22}
+                        ry={22}
+                        fill="none"
+                        stroke="#A8BED4"
+                        strokeWidth="1.4"
+                        strokeDasharray="3 4"
+                        opacity="0.7"
+                      />
+                      {chain?.images[0] && (
+                        <image
+                          href={chain.images[0]}
+                          x={-bubbleW / 4 - slotSize / 2}
+                          y={bubbleCy - slotSize / 2}
+                          width={slotSize}
+                          height={slotSize}
+                          preserveAspectRatio="xMidYMid meet"
+                        />
+                      )}
+                      {clasp?.images[0] && (
+                        <image
+                          href={clasp.images[0]}
+                          x={bubbleW / 4 - slotSize / 2}
+                          y={bubbleCy - slotSize / 2}
+                          width={slotSize}
+                          height={slotSize}
+                          preserveAspectRatio="xMidYMid meet"
+                        />
+                      )}
+                    </g>
                   )}
                 </g>
               );
@@ -1043,86 +1110,6 @@ export const BraceletPreview = forwardRef<BraceletPreviewHandle, Props>(function
             })}
           </g>
 
-          {/* Kawaii attachment overlay : chain (real PNG photo) + clasp,
-              rendered AFTER components.map so they paint ON TOP of the
-              topmost bead on the left leg. The user explicitly asked for
-              this z-ordering — the clasp should "pass over" the highest
-              bead, mimicking how the real metal ring closes around the
-              bracelet wire just above the first bead. Coordinates are
-              ABSOLUTE (no figGeom translate wrapper) since we sit
-              outside the figurine `<g>`.
-              The chain is the studio photo, rotated to follow the
-              diagonal from figurine halo edge to top-of-left-leg. The
-              square-canvas photos (1500×1500) host a horseshoe-shape
-              chain whose content occupies ~73 % of the canvas width ;
-              we size the image at len × 1.4 so the chain visually
-              spans the path with a small breathing margin on either
-              end. preserveAspectRatio="xMidYMid meet" keeps the
-              horseshoe undistorted. */}
-          {figurine &&
-            variant === 'u' &&
-            (() => {
-              const chain = figurineChainId ? CHAIN_BY_ID[figurineChainId] : undefined;
-              const clasp = figurineClaspId ? CLASP_BY_ID[figurineClaspId] : undefined;
-              if (!chain && !clasp) return null;
-
-              const { cx: figCx, cy: figCy, r: figR } = figGeom;
-              // Vertical lift so the chain end sits ABOVE the topmost
-              // bead on the left leg instead of squarely on top of it.
-              const claspLift = 36;
-              // Extra lift just for the clasp glyph (not the chain).
-              // The chain terminates at endY ; the clasp body floats
-              // a tiny bit higher so it's clearly above the bead row
-              // without visibly detaching from the chain tip.
-              const claspExtraLift = 14;
-              // Absolute path : figurine halo edge → just above the top of left leg.
-              const startX = figCx + figR + 18;
-              const startY = figCy;
-              const endX = U_GEOM.xLeft;
-              const endY = U_GEOM.yTop - claspLift;
-              const claspCenterY = endY - claspExtraLift;
-              const dxC = endX - startX;
-              const dyC = endY - startY;
-              const len = Math.sqrt(dxC * dxC + dyC * dyC);
-
-              const angleDeg = (Math.atan2(dyC, dxC) * 180) / Math.PI;
-              const midX = (startX + endX) / 2;
-              const midY = (startY + endY) / 2;
-              // Photo canvas is square (1500×1500) but the actual chain
-              // content fills only ~73 % of the width. Sizing at len × 1.4
-              // makes the chain content land at roughly the path length,
-              // letting the figurine halo edge and the clasp touch its
-              // ends visually.
-              const chainImgSize = Math.max(120, len * 1.4);
-              const claspSize = 90;
-
-              return (
-                <g pointerEvents="none">
-                  {chain?.images[0] && (
-                    <g transform={`translate(${midX} ${midY}) rotate(${angleDeg.toFixed(3)})`}>
-                      <image
-                        href={chain.images[0]}
-                        x={-chainImgSize / 2}
-                        y={-chainImgSize / 2}
-                        width={chainImgSize}
-                        height={chainImgSize}
-                        preserveAspectRatio="xMidYMid meet"
-                      />
-                    </g>
-                  )}
-                  {clasp?.images[0] && (
-                    <image
-                      href={clasp.images[0]}
-                      x={endX - claspSize / 2}
-                      y={claspCenterY - claspSize / 2}
-                      width={claspSize}
-                      height={claspSize}
-                      preserveAspectRatio="xMidYMid meet"
-                    />
-                  )}
-                </g>
-              );
-            })()}
         </svg>
       </div>
       {isEmpty && (

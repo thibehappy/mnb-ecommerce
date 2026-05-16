@@ -13,7 +13,7 @@ import {
 import { StoneSwatch } from '@/components/ui/StoneSwatch';
 import type { BeadShape } from '@/types';
 import { haptic } from '@/lib/utils/feedback';
-import { beadPhotoZoom } from '@/lib/utils/bead-display';
+import { beadPickerZoom } from '@/lib/utils/bead-display';
 import { useT } from '@/lib/i18n/use-t';
 import { formatBeadSize, formatCmFromMm } from '@/lib/utils/format';
 import { cn } from '@/lib/utils/cn';
@@ -170,7 +170,7 @@ export function BeadPicker({
                       size={54}
                       faceted={bead.shape === 'faceted'}
                       image={bead.images[0]}
-                      zoom={beadPhotoZoom(bead.shape)}
+                      zoom={beadPickerZoom(bead)}
                     />
                   </div>
                   <div className="text-center min-w-0 w-full">

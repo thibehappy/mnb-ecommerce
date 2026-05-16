@@ -6,12 +6,15 @@ import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { CartLineItem } from '@/components/commerce/CartLineItem';
 import { useCart, cartSubtotal, cartShipping, cartTotal } from '@/lib/store/cart';
 import { formatPrice } from '@/lib/utils/format';
+import { useShopifyCheckout } from '@/lib/shopify/use-checkout';
 
 export function CartPageClient() {
   const lines = useCart((s) => s.lines);
   const subtotal = cartSubtotal(lines);
   const shipping = cartShipping(subtotal);
   const total = cartTotal(lines);
+  // Shopify checkout — same hook as CartDrawer, redirects to Shopify.
+  const { startCheckout, isStarting, error } = useShopifyCheckout();
 
   return (
     <div className="container-editorial py-10 lg:py-16">
@@ -62,9 +65,20 @@ export function CartPageClient() {
               <span className="text-[13px] text-[var(--color-graphite)]">Total TTC</span>
               <span className="font-serif text-[28px] tabular-nums">{formatPrice(total)}</span>
             </div>
-            <Button href="/commande" fullWidth size="lg">
+            <Button
+              type="button"
+              onClick={startCheckout}
+              loading={isStarting}
+              fullWidth
+              size="lg"
+            >
               Passer commande
             </Button>
+            {error ? (
+              <p className="text-[12px] text-[#A4473E] mt-3 text-center" role="alert">
+                {error}
+              </p>
+            ) : null}
             <p className="text-caption mt-4 text-center">
               Paiement sécurisé · Livraison 2-4 jours
             </p>

@@ -1,4 +1,4 @@
-import type { BeadShape } from '@/types';
+import type { Bead, BeadShape } from '@/types';
 
 /**
  * Photo zoom factor per bead shape.
@@ -27,4 +27,19 @@ export function beadPhotoZoom(shape: BeadShape): number {
       // round, faceted, rondelle, nugget — lots of PNG padding
       return 3;
   }
+}
+
+/**
+ * Picker-specific zoom — honors an optional per-bead `pickerZoom` override
+ * (used for beads whose source PNG is more tightly cropped than the shape's
+ * default crop ratio assumes, e.g. animal silhouettes or 2-bead "paire"
+ * photos that would otherwise dominate the tile grid).
+ *
+ * The bracelet preview, drag ghost, and CompositionTray continue to use
+ * `beadPhotoZoom(bead.shape)` directly — the override is intentionally
+ * scoped to the picker, since `sizeMm` is the source of truth for bracelet
+ * length and visual scale on the cord.
+ */
+export function beadPickerZoom(bead: Pick<Bead, 'shape' | 'pickerZoom'>): number {
+  return bead.pickerZoom ?? beadPhotoZoom(bead.shape);
 }

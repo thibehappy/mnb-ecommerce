@@ -14,7 +14,10 @@
     "sync:charms": "python scripts/sync_charms.py",
     "sync:attachments": "python scripts/sync_attachments.py",
     "sync:all": "python scripts/sync_beads.py && python scripts/sync_charms.py && python scripts/sync_attachments.py",
-    "detour:bead": "python scripts/detour_bead.py"
+    "detour:bead": "python scripts/detour_bead.py",
+    "shopify:csv:bracelets": "python scripts/generate_shopify_csv.py",
+    "shopify:csv:beads": "npx -y tsx scripts/generate_bead_csv.ts",
+    "shopify:upload-images": "npx -y tsx scripts/upload_bead_images.ts"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.59.0",

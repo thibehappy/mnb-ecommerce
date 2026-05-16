@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { useCart, cartSubtotal, cartShipping, cartTotal } from '@/lib/store/cart';
 import { useT } from '@/lib/i18n/use-t';
 import { formatPrice } from '@/lib/utils/format';
+import { useShopifyCheckout } from '@/lib/shopify/use-checkout';
 import { CartLineItem } from './CartLineItem';
 
 export function CartDrawer() {
@@ -14,6 +15,9 @@ export function CartDrawer() {
   const shipping = cartShipping(subtotal);
   const total = cartTotal(lines);
   const { t } = useT();
+  // Shopify checkout — POST current cart, redirect to Shopify checkoutUrl.
+  // Replaces the previous "Link to /commande (mocked form)" flow.
+  const { startCheckout, isStarting, error } = useShopifyCheckout();
 
   return (
     <Drawer
@@ -37,9 +41,23 @@ export function CartDrawer() {
               <span className="text-[13px] text-[var(--color-graphite)]">{t('checkout.total')}</span>
               <span className="font-serif text-[22px] tabular-nums">{formatPrice(total)}</span>
             </div>
-            <Button href="/commande" onClick={close} fullWidth size="lg">
+            <Button
+              type="button"
+              onClick={startCheckout}
+              loading={isStarting}
+              fullWidth
+              size="lg"
+            >
               {t('cart.checkout')}
             </Button>
+            {error ? (
+              // Shown only when /api/shopify/cart returned an error (Shopify
+              // down, missing token, variant not found, etc.). The user can
+              // retry by clicking the button again.
+              <p className="text-[11px] text-[#A4473E] text-center" role="alert">
+                {error}
+              </p>
+            ) : null}
             <button
               type="button"
               onClick={close}

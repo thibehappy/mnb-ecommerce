@@ -821,6 +821,14 @@ export function Configurator() {
                               : t('tabs.charms');
                       // Beads + Stones share the same length budget (both
                       // sit on the cord). Charms use a count / max badge.
+                      // On Classique we have THREE tabs in the same row,
+                      // and the "17,2/17" length pill kept eating the
+                      // tab title (PER…/PIE…). The total length is
+                      // already shown in the bottom action row, so we
+                      // suppress the per-tab pill on beads + stones
+                      // when Classique. Charms keep their count badge
+                      // (it's distinct + useful).
+                      const showBadge = !(isClassique && id !== 'charms');
                       const badge =
                         id === 'charms'
                           ? `${charmsCount}/${atelier?.maxCharms ?? 0}`
@@ -843,14 +851,16 @@ export function Configurator() {
                           <span className="text-[10px] font-black uppercase tracking-tight truncate">
                             {label}
                           </span>
-                          <span
-                            className={cn(
-                              'inline-flex shrink-0 items-center justify-center h-5 px-2 rounded-full text-[9px] font-black tabular-nums whitespace-nowrap',
-                              active ? 'bg-white/15 text-white' : 'bg-[#F5F0E8] text-[#3D5A73]',
-                            )}
-                          >
-                            {badge}
-                          </span>
+                          {showBadge && (
+                            <span
+                              className={cn(
+                                'inline-flex shrink-0 items-center justify-center h-5 px-2 rounded-full text-[9px] font-black tabular-nums whitespace-nowrap',
+                                active ? 'bg-white/15 text-white' : 'bg-[#F5F0E8] text-[#3D5A73]',
+                              )}
+                            >
+                              {badge}
+                            </span>
+                          )}
                         </button>
                       );
                     })}

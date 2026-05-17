@@ -139,7 +139,6 @@ export function BeadPicker({
             {filtered.map((bead) => {
               const fits = canFit(atelierId, sizeCm, components, bead.sizeMm);
               const disabled = !fits;
-              const variant = beadVariant(bead.name);
               return (
                 <button
                   key={bead.id}
@@ -158,11 +157,6 @@ export function BeadPicker({
                   className="group relative aspect-square flex flex-col items-center justify-center gap-1.5 p-2 md:p-3 bg-[#F5F0E8] rounded-xl md:rounded-2xl border border-transparent hover:border-[#3D5A73] hover:bg-white hover:shadow-md active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-transparent disabled:hover:bg-[#F5F0E8] disabled:hover:shadow-none touch-manipulation select-none md:cursor-grab md:active:cursor-grabbing"
                   aria-label={`${t('bead.add')} ${bead.name}`}
                 >
-                  {variant ? (
-                    <span className="absolute right-2 top-2 rounded-full bg-[#2D3748] px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-white shadow-sm">
-                      {variant}
-                    </span>
-                  ) : null}
                   <div className="transition-transform duration-300 group-hover:scale-110">
                     <StoneSwatch
                       hex={bead.hex}
@@ -192,13 +186,7 @@ export function BeadPicker({
 }
 
 function tileName(name: string): string {
-  const variant = beadVariant(name);
-  if (!variant) return name.split(' ')[0] ?? name;
-  return `${name.split(' ')[0] ?? name} ${variant}`;
-}
-
-function beadVariant(name: string): string | null {
-  return name.match(/\bV\d+\b/i)?.[0]?.toUpperCase() ?? null;
+  return name.split(' ')[0] ?? name;
 }
 
 function FilterChip({

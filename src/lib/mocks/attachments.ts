@@ -85,13 +85,6 @@ const CHAINS_RAW: AttachmentChain[] = [
     images: [],
   },
   {
-    id: 'attach_chain_purple',
-    name: 'Chaîne violette',
-    color: 'purple',
-    hex: '#6B45A8',
-    images: [],
-  },
-  {
     id: 'attach_chain_lime',
     name: 'Chaîne lime',
     color: 'lime',
@@ -122,37 +115,6 @@ const CHAINS_RAW: AttachmentChain[] = [
 ];
 
 const CLASPS_RAW: AttachmentClasp[] = [
-  {
-    id: 'attach_clasp_round_yellow',
-    name: 'Anneau jaune',
-    shape: 'round',
-    hex: '#E8DC3F',
-    images: [],
-  },
-  {
-    id: 'attach_clasp_round_green',
-    name: 'Anneau vert',
-    shape: 'round',
-    hex: '#3FA844',
-    images: [],
-  },
-  {
-    id: 'attach_clasp_heart_blue',
-    name: 'Cœur bleu à pois',
-    shape: 'heart',
-    hex: '#1E3A8A',
-    dotsHex: '#E8DC3F',
-    images: [],
-  },
-  {
-    id: 'attach_clasp_heart_orange',
-    name: 'Cœur orange à pois',
-    shape: 'heart',
-    hex: '#E55B2B',
-    dotsHex: '#FFFFFF',
-    images: [],
-  },
-
   // ─── Batch PERLES_CANVA_DANY 64-80 (ajoute 2026-05-16) ───
   // 17 nouveaux clasps colores. Renomes pour eviter collisions avec
   // les existants (round_green, heart_orange). Le snaphook utilise
@@ -317,4 +279,4 @@ export const CLASP_BY_ID = Object.fromEntries(CLASPS.map((c) => [c.id, c])) as R
  *  the user touching the chain/clasp choices yet. Red chain is the
  *  catalogue's "primary" chain; the green round clasp pairs with it. */
 export const DEFAULT_CHAIN_ID = 'attach_chain_red';
-export const DEFAULT_CLASP_ID = 'attach_clasp_round_green';
+export const DEFAULT_CLASP_ID = 'attach_clasp_round_emerald_v2';

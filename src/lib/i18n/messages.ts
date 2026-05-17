@@ -29,7 +29,6 @@ const FR: Dict = {
   'atelierSelect.title.line1': 'Quel atelier',
   'atelierSelect.title.line2': 'choisissez-vous ?',
   'atelierSelect.choose': 'Choisir →',
-  'atelierSelect.haveGiftCode': 'J’ai un code cadeau',
   'atelierSelect.freeSize': 'Taille libre',
   'atelierSelect.figurineSpec': '+ {0} figurine',
   'atelierSelect.charmSpec.singular': '+ {0} charm',
@@ -45,12 +44,6 @@ const FR: Dict = {
   'configurator.universe': 'Univers',
 
   // Configurator — gift redemption banner
-  'gift.banner.toValidate': 'Cadeau à valider',
-  'gift.banner.toCompose': 'Cadeau à composer',
-  'gift.banner.from': 'de la part de',
-  'gift.banner.tweakDesigned': 'Vous pouvez ajuster ce bracelet ou valider tel quel.',
-  'gift.banner.composeOpen': 'Composez votre bracelet — il vous est offert.',
-  'gift.banner.exit': 'Quitter le mode cadeau',
 
   // Configurator — size
   'size.perso': 'Perso.',
@@ -79,12 +72,8 @@ const FR: Dict = {
   'action.linkCopied': 'Lien copié',
   'action.shareOpen': 'Partage ouvert',
   'action.shareCancelled': 'Partage annulé',
-  'action.gift': 'Offrir',
   'action.addToCart': 'Ajouter au panier',
   'action.added': 'Ajouté',
-  'action.confirmGift': 'Confirmer ce cadeau',
-  'action.confirmed': 'Confirmé',
-  'action.offered': 'Offert',
 
   // Fit messages
   'fit.empty': 'Ajoutez vos premières perles pour composer le bracelet',
@@ -110,61 +99,6 @@ const FR: Dict = {
   'share.modal.confirm': 'Partager',
   'share.empty': 'GENEREZ UNE CREATION',
   'share.defaultName': 'Ma création',
-
-  // Gift modal — creation
-  'giftModal.eyebrow': 'Offrir un bracelet',
-  'giftModal.title': 'Carte cadeau',
-  'giftModal.designedHelp':
-    'Le bracelet que vous venez de composer est offert avec un code unique. La personne qui le reçoit pourra le voir, l’ajuster ou valider tel quel.',
-  'giftModal.openHelp':
-    'La personne qui reçoit le code choisit ses perles et compose son bracelet en ligne dans l’atelier que vous lui réservez.',
-  'giftModal.modeDesigned': 'Ma création',
-  'giftModal.modeDesigned.detail': 'Le bracelet que je viens de composer',
-  'giftModal.modeOpen': 'À composer',
-  'giftModal.modeOpen.detail': 'La personne crée son propre bracelet',
-  'giftModal.atelierLocked': 'Atelier réservé',
-  'giftModal.bracelet': 'Bracelet offert',
-  'giftModal.from': 'De la part de',
-  'giftModal.to': 'Pour',
-  'giftModal.fromPlaceholder': 'Votre prénom',
-  'giftModal.toPlaceholder': 'Prénom du destinataire',
-  'giftModal.message': 'Petit mot (facultatif)',
-  'giftModal.messagePlaceholder': 'Bonne fête, joyeux anniversaire…',
-  'giftModal.total': 'Total',
-  'giftModal.generate': 'Générer le code',
-
-  // Gift confirmation
-  'giftConfirm.eyebrow': 'Carte créée',
-  'giftConfirm.title': 'Votre code cadeau',
-  'giftConfirm.helpDesigned':
-    'Transmettez ce code à la personne qui recevra votre bracelet. Elle pourra l’ouvrir, le voir et l’ajuster avant la confection.',
-  'giftConfirm.helpOpen':
-    'Transmettez ce code à la personne. Elle compose son bracelet en ligne dans l’atelier',
-  'giftConfirm.codeLabel': 'Code cadeau',
-  'giftConfirm.recipient': 'Pour',
-  'giftConfirm.fromShort': 'de la part de',
-  'giftConfirm.copyCode': 'Copier le code',
-  'giftConfirm.copied': 'Copié',
-  'giftConfirm.sendLink': 'Envoyer le lien',
-  'giftConfirm.done': 'Terminé',
-
-  // Gift redemption modal
-  'giftRedeem.eyebrow': 'Ouvrir une carte cadeau',
-  'giftRedeem.title': 'Saisissez votre code',
-  'giftRedeem.subtitle':
-    'Le code se trouve sur votre carte cadeau ou dans le message qui vous a été envoyé.',
-  'giftRedeem.placeholder': 'MNB-XXXX-XXXX',
-  'giftRedeem.invalidFormat': 'Format invalide. Le code ressemble à MNB-XXXX-XXXX.',
-  'giftRedeem.notFound': 'Ce code est inconnu ou a été créé sur un autre appareil.',
-  'giftRedeem.cancel': 'Annuler',
-  'giftRedeem.open': 'Ouvrir',
-
-  // Unboxing modal
-  'unboxing.eyebrow': 'Unboxing digital',
-  'unboxing.length': 'Longueur',
-  'unboxing.price': 'Prix',
-  'unboxing.close': 'Fermer',
-  'unboxing.share': 'Partager',
 
   // Commande / Checkout
   'checkout.eyebrow': 'Dernière étape',
@@ -367,7 +301,6 @@ const EN: Dict = {
   'atelierSelect.title.line1': 'Which workshop',
   'atelierSelect.title.line2': 'do you choose?',
   'atelierSelect.choose': 'Choose →',
-  'atelierSelect.haveGiftCode': 'I have a gift code',
   'atelierSelect.freeSize': 'Free size',
   'atelierSelect.figurineSpec': '+ {0} figurine',
   'atelierSelect.charmSpec.singular': '+ {0} charm',
@@ -382,12 +315,6 @@ const EN: Dict = {
   'configurator.universe': 'Universe',
 
   // Configurator — gift redemption banner
-  'gift.banner.toValidate': 'Gift to validate',
-  'gift.banner.toCompose': 'Gift to compose',
-  'gift.banner.from': 'from',
-  'gift.banner.tweakDesigned': 'You can tweak this bracelet or confirm it as-is.',
-  'gift.banner.composeOpen': 'Compose your bracelet — it’s on us.',
-  'gift.banner.exit': 'Exit gift mode',
 
   // Configurator — size
   'size.perso': 'Custom',
@@ -416,12 +343,8 @@ const EN: Dict = {
   'action.linkCopied': 'Link copied',
   'action.shareOpen': 'Share opened',
   'action.shareCancelled': 'Share cancelled',
-  'action.gift': 'Gift',
   'action.addToCart': 'Add to cart',
   'action.added': 'Added',
-  'action.confirmGift': 'Confirm this gift',
-  'action.confirmed': 'Confirmed',
-  'action.offered': 'Free',
 
   // Fit messages
   'fit.empty': 'Add your first beads to compose the bracelet',
@@ -447,61 +370,6 @@ const EN: Dict = {
   'share.modal.confirm': 'Share',
   'share.empty': 'CREATE A DESIGN',
   'share.defaultName': 'My creation',
-
-  // Gift modal — creation
-  'giftModal.eyebrow': 'Gift a bracelet',
-  'giftModal.title': 'Gift card',
-  'giftModal.designedHelp':
-    'The bracelet you just composed is gifted with a unique code. The recipient will be able to view, tweak or accept it as-is.',
-  'giftModal.openHelp':
-    'The recipient picks their own beads and composes their bracelet online in the workshop you reserve for them.',
-  'giftModal.modeDesigned': 'My creation',
-  'giftModal.modeDesigned.detail': 'The bracelet I just composed',
-  'giftModal.modeOpen': 'To compose',
-  'giftModal.modeOpen.detail': 'The recipient creates their own',
-  'giftModal.atelierLocked': 'Reserved workshop',
-  'giftModal.bracelet': 'Gifted bracelet',
-  'giftModal.from': 'From',
-  'giftModal.to': 'To',
-  'giftModal.fromPlaceholder': 'Your first name',
-  'giftModal.toPlaceholder': 'Recipient’s first name',
-  'giftModal.message': 'Note (optional)',
-  'giftModal.messagePlaceholder': 'Happy birthday, with love…',
-  'giftModal.total': 'Total',
-  'giftModal.generate': 'Generate the code',
-
-  // Gift confirmation
-  'giftConfirm.eyebrow': 'Card created',
-  'giftConfirm.title': 'Your gift code',
-  'giftConfirm.helpDesigned':
-    'Send this code to the person who will receive your bracelet. They’ll be able to open it, view it and tweak it before crafting.',
-  'giftConfirm.helpOpen':
-    'Send this code to the person. They will compose their bracelet online in the workshop',
-  'giftConfirm.codeLabel': 'Gift code',
-  'giftConfirm.recipient': 'For',
-  'giftConfirm.fromShort': 'from',
-  'giftConfirm.copyCode': 'Copy code',
-  'giftConfirm.copied': 'Copied',
-  'giftConfirm.sendLink': 'Send link',
-  'giftConfirm.done': 'Done',
-
-  // Gift redemption modal
-  'giftRedeem.eyebrow': 'Open a gift card',
-  'giftRedeem.title': 'Enter your code',
-  'giftRedeem.subtitle':
-    'The code is on your gift card or in the message you received.',
-  'giftRedeem.placeholder': 'MNB-XXXX-XXXX',
-  'giftRedeem.invalidFormat': 'Invalid format. The code looks like MNB-XXXX-XXXX.',
-  'giftRedeem.notFound': 'This code is unknown or was created on another device.',
-  'giftRedeem.cancel': 'Cancel',
-  'giftRedeem.open': 'Open',
-
-  // Unboxing modal
-  'unboxing.eyebrow': 'Digital unboxing',
-  'unboxing.length': 'Length',
-  'unboxing.price': 'Price',
-  'unboxing.close': 'Close',
-  'unboxing.share': 'Share',
 
   // Checkout
   'checkout.eyebrow': 'Final step',

@@ -315,6 +315,8 @@ const BEADS_RAW: Bead[] = [
     description: 'Cabochon améthyste sombre, lustré profond.',
     meaning: ['sagesse'],
     images: [],
+    // PNG tightly cropped → tile rendered oversized vs other 10mm beads.
+    pickerZoom: 1.8,
   },
   {
     id: 'bead_amethyst_facette_lavande',
@@ -329,6 +331,8 @@ const BEADS_RAW: Bead[] = [
     description: 'Améthyste lavande aux facettes douces.',
     meaning: ['sagesse', 'douceur'],
     images: [],
+    // PNG tightly cropped → tile rendered oversized vs other 10mm beads.
+    pickerZoom: 1.8,
   },
 
   // ── Jade
@@ -462,6 +466,8 @@ const BEADS_RAW: Bead[] = [
     stock: 90,
     description: 'Perle transparente irisée, reflets arc-en-ciel.',
     images: [],
+    // PNG shows 2 stacked beads → tile renders as if it were 16mm.
+    pickerZoom: 1.0,
   },
 
   // ── Enamel : animaux emailles (perles silhouettes, pas figurines)
@@ -492,6 +498,8 @@ const BEADS_RAW: Bead[] = [
     stock: 60,
     description: 'Perle silhouette ourson translucide violet.',
     images: [],
+    // Same tight-crop / oversized issue as bead_bear_violet_opaque.
+    pickerZoom: 1.4,
   },
 
   // ── Enamel : porcelaine peinte (motifs floraux)
@@ -1029,7 +1037,7 @@ const BEADS_RAW: Bead[] = [
     description: 'Perle silhouette ourson émaillé violet opaque.',
     images: [],
     // Same tight-crop / oversized issue as bead_dolphin_violet.
-    pickerZoom: 1.5,
+    pickerZoom: 1.4,
   },
   {
     id: 'bead_shell_green',
@@ -2320,6 +2328,8 @@ const BEADS_RAW: Bead[] = [
     stock: 60,
     description: 'Perle silhouette ange argenté brillant.',
     images: [],
+    // Tall silhouette → tile rendered oversized vs other 14mm beads.
+    pickerZoom: 1.4,
   },
   {
     id: 'bead_butterfly_lime',
@@ -2359,6 +2369,8 @@ const BEADS_RAW: Bead[] = [
     stock: 60,
     description: 'Perle silhouette dollar $ violet iridescent.',
     images: [],
+    // Tall silhouette → tile rendered oversized vs other 12mm beads.
+    pickerZoom: 1.4,
   },
   {
     id: 'bead_mickey_mint',
@@ -2372,6 +2384,8 @@ const BEADS_RAW: Bead[] = [
     stock: 60,
     description: 'Perle silhouette tête de Mickey vert menthe translucide.',
     images: [],
+    // Tight-crop silhouette → tile rendered oversized vs other 12mm beads.
+    pickerZoom: 1.4,
   },
   {
     id: 'bead_panda_green',
@@ -2793,6 +2807,8 @@ const BEADS_RAW: Bead[] = [
     stock: 60,
     description: 'Perle silhouette poisson rouge émaillé, œil noir.',
     images: [],
+    // Tight-crop silhouette → tile rendered oversized vs other 12mm beads.
+    pickerZoom: 1.4,
   },
 
   // ─── Batch TOUTES_PERLES 76-99 + 220-239 (ajoute 2026-05-15) ───
@@ -3191,7 +3207,7 @@ const BEADS_RAW: Bead[] = [
     description: 'Perle violet iridescent (photographée par paire).',
     images: [],
     // PNG shows 2 stacked beads → tile renders as if it were 16mm.
-    pickerZoom: 1.5,
+    pickerZoom: 1.0,
   },
   {
     id: 'bead_iridescent_dark_purple',
@@ -3205,6 +3221,9 @@ const BEADS_RAW: Bead[] = [
     stock: 90,
     description: 'Perle violet sombre aux reflets bleu-vert.',
     images: [],
+    // PNG tightly cropped (~70 % canvas vs ~35 % for other 8mm iridescents)
+    // → tile rendered oversized at default zoom 3.
+    pickerZoom: 1.5,
   },
 
   // ── Enamel : magenta rondelle + heart silver + lettres
@@ -3246,6 +3265,8 @@ const BEADS_RAW: Bead[] = [
     stock: 60,
     description: 'Perle lettre B émaillée violet.',
     images: [],
+    // Tight-crop letter silhouette → tile rendered oversized vs other 10mm beads.
+    pickerZoom: 1.4,
   },
   {
     id: 'bead_lettre_o',
@@ -3259,6 +3280,8 @@ const BEADS_RAW: Bead[] = [
     stock: 60,
     description: 'Perle lettre O bleu marine aux reflets iridescents.',
     images: [],
+    // Tight-crop letter silhouette → tile rendered oversized vs other 10mm beads.
+    pickerZoom: 1.4,
   },
 
   // ── Enamel : silhouettes 81 + 92 + 230s (animaux, objets, perso)
@@ -3287,6 +3310,8 @@ const BEADS_RAW: Bead[] = [
     stock: 50,
     description: 'Perle silhouette personnage kawaii à capuche rose.',
     images: [],
+    // Tight-crop silhouette → tile rendered oversized vs other 14mm beads.
+    pickerZoom: 1.4,
   },
   {
     id: 'bead_croix_violette',
@@ -3727,6 +3752,8 @@ const BEADS_RAW: Bead[] = [
     stock: 60,
     description: 'Perle lettre Z émaillée rouge bordeaux brillant.',
     images: [],
+    // Tight-crop letter silhouette → tile rendered oversized vs other 10mm beads.
+    pickerZoom: 1.4,
   },
   {
     id: 'bead_lettre_u_lavender',
@@ -3740,6 +3767,8 @@ const BEADS_RAW: Bead[] = [
     stock: 60,
     description: 'Perle lettre U émaillée lavande aux reflets iridescents.',
     images: [],
+    // Tight-crop letter silhouette → tile rendered oversized vs other 10mm beads.
+    pickerZoom: 1.4,
   },
   {
     id: 'bead_lettre_b_iridescent',
@@ -3753,6 +3782,8 @@ const BEADS_RAW: Bead[] = [
     stock: 60,
     description: 'Perle lettre B violet iridescent.',
     images: [],
+    // Tight-crop letter silhouette → tile rendered oversized vs other 10mm beads.
+    pickerZoom: 1.4,
   },
   {
     id: 'bead_magenta_stars',
@@ -3900,6 +3931,8 @@ const BEADS_RAW: Bead[] = [
     stock: 80,
     description: 'Perle ovale rose-blanc aux tourbillons doux.',
     images: [],
+    // Wide oval fills canvas → tile rendered oversized vs other 10mm beads.
+    pickerZoom: 1.4,
   },
   {
     id: 'bead_cube_mauve',

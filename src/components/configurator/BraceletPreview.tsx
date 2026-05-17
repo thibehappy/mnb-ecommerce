@@ -79,11 +79,12 @@ function r(n: number): number {
 
 function viewBoxFor(variant: Variant): { width: number; height: number } {
   if (variant === 'flat') return { width: 1000, height: 140 };
-  // U canvas height bumped from 680 → 760 to host the figurine
-  // attachment system (chain + clasp) above the bracelet without
-  // clipping at 100 % zoom. The bracelet itself keeps the same
-  // sideLen — only the empty space above its top is enlarged.
-  if (variant === 'u') return { width: 1000, height: 760 };
+  // U canvas tightened to 640 px (was 760) so the bracelet sits closer
+  // to the top of the stage. The figurine + companion bubble render
+  // on the LEFT side at figGeom.cx = xLeft − 240 (not above) so the
+  // extra headroom we had was unused space. yTop drops by the same
+  // 120 px so sideLen (bracelet vertical sides) stays at 425.
+  if (variant === 'u') return { width: 1000, height: 640 };
   // Loop — height kept compact so the rendered SVG doesn't push the stage
   // container taller than its min-h (which would shove the bottom action
   // buttons offscreen). The curve is positioned at the center of this
@@ -95,10 +96,10 @@ const U_GEOM = (() => {
   const { width, height } = viewBoxFor('u');
   const cx = width / 2;
   const curveR = 135;
-  // 140 px of headroom above the bracelet so the chain + heart/round
-  // clasp can extend upward without leaving the canvas. Bottom margin
-  // stays at 60 px (no need for extra room below the curve).
-  const yTop = 140;
+  // 20 px of headroom above the bracelet — tight crop. The figurine
+  // halo top sits at yTop + 22 = 42 (still inside the canvas). Bottom
+  // margin stays at 60 px (no need for extra room below the curve).
+  const yTop = 20;
   const yBottom = height - 60;
   const yArcCenter = yBottom - curveR;
   return {
@@ -818,9 +819,11 @@ export const BraceletPreview = forwardRef<BraceletPreviewHandle, Props>(function
                 variant === 'u' && Boolean(chain?.images[0] || clasp?.images[0]);
               // Companion bubble dimensions. Centered horizontally on the
               // figurine, offset down by halo + a small gap so the two
-              // bubbles read as a clean "info card stack".
-              const bubbleW = 220;
-              const bubbleH = 116;
+              // bubbles read as a clean "info card stack". Bumped from
+              // 220×116 (slot 92) → 260×140 (slot 116) so the chain +
+              // clasp photos read clearly at 1× zoom.
+              const bubbleW = 260;
+              const bubbleH = 140;
               const bubbleGap = 22;
               const bubbleCy = figR + 18 + bubbleGap + bubbleH / 2;
               const slotSize = bubbleH - 24; // square photo slots inside

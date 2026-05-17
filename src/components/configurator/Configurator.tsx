@@ -6,10 +6,8 @@ import {
   Check,
   Copy,
   FlipVertical2,
-  Gift,
   GripHorizontal,
   Minus,
-  PackageCheck,
   Plus,
   RotateCcw,
   Share2,
@@ -56,8 +54,6 @@ import {
 import { cn } from '@/lib/utils/cn';
 import { atelierSound, haptic, successMoment } from '@/lib/utils/feedback';
 import { encodeBraceletDesign } from '@/lib/utils/share-design';
-import { useGiftCards } from '@/lib/store/gift-cards';
-import { GiftModal } from '@/components/gifts/GiftModal';
 import { useT } from '@/lib/i18n/use-t';
 
 const TAB_IDS = ['beads', 'stones', 'charms'] as const;
@@ -117,18 +113,6 @@ export function Configurator() {
   const price = useConfiguratorPrice();
   const atelier = ATELIER_BY_ID[atelierId];
 
-  // Gift card state — `activeRedemptionCode` is set when the user lands here
-  // via a `?gift=…` link or types a code on the atelier screen. While it's
-  // non-null we shift the language of the primary CTA from "add to cart" to
-  // "confirm gift", and surface a banner reminding the user they're acting
-  // on someone else's gift.
-  const activeRedemptionCode = useGiftCards((s) => s.activeRedemptionCode);
-  const activeGiftCard = useGiftCards((s) =>
-    s.activeRedemptionCode ? s.cards.find((c) => c.code === s.activeRedemptionCode) : undefined,
-  );
-  const updateDesignedGift = useGiftCards((s) => s.updateDesignedGift);
-  const markGiftRedeemed = useGiftCards((s) => s.markRedeemed);
-  const endRedemption = useGiftCards((s) => s.endRedemption);
   const { t, lang } = useT();
 
   // Fulfillment mode chosen at order time : DIY kit (default — pieces
@@ -148,9 +132,6 @@ export function Configurator() {
   const [shareStatus, setShareStatus] = useState<string | null>(null);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [shareName, setShareName] = useState('');
-  const [giftModalOpen, setGiftModalOpen] = useState(false);
-  const [giftRedeemedConfirm, setGiftRedeemedConfirm] = useState(false);
-  const [unboxingOpen, setUnboxingOpen] = useState(false);
   // CompositionTray ("Ma composition") is hidden by default — surfacing it
   // costs vertical real estate and confuses first-time users. The toggle
   // sits next to "Recommencer" so reordering / batch-removing pieces is one
@@ -338,37 +319,7 @@ export function Configurator() {
       : undefined;
     successMoment(origin);
     setJustAddedCart(true);
-    setUnboxingOpen(true);
     setTimeout(() => setJustAddedCart(false), 2000);
-  }
-
-  /**
-   * Confirm a gift redemption. The recipient pressed "Confirmer ce cadeau"
-   * after viewing (and optionally tweaking) the bracelet. We :
-   *   1. Snapshot the (possibly tweaked) design back into the gift card so
-   *      the artisan ships exactly what's been confirmed.
-   *   2. Mark the card as redeemed — it becomes read-only afterwards.
-   *   3. Show a brief confirmation moment and clear the active redemption.
-   */
-  function handleConfirmGift() {
-    if (!canOrder || !activeGiftCard) return;
-    const name = draftTitle || activeGiftCard.design?.title || DEFAULT_BRACELET_NAME;
-    const design = snapshotConfig(
-      useConfigurator.getState(),
-      name,
-      undefined,
-      effectiveFulfillmentMode,
-    );
-    if (activeGiftCard.kind === 'designed' || activeGiftCard.kind === 'open') {
-      updateDesignedGift(activeGiftCard.code, design);
-    }
-    markGiftRedeemed(activeGiftCard.code);
-    successMoment();
-    setGiftRedeemedConfirm(true);
-    setTimeout(() => {
-      setGiftRedeemedConfirm(false);
-      endRedemption();
-    }, 2400);
   }
 
   return (
@@ -392,52 +343,6 @@ export function Configurator() {
             {atelier?.name} · {atelier?.wireType}
           </p>
         </div>
-
-        {/* Active gift redemption banner — surfaces when the recipient
-            arrived via a `?gift=…` link or typed a code. Explains the mode,
-            shows the sender + message, and gives an escape hatch. */}
-        {activeGiftCard && (
-          <div className="mb-5 rounded-2xl border border-[#3D5A73] bg-[#F5F0E8] p-3 md:p-4 shadow-sm">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div className="flex items-start gap-3">
-                <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#3D5A73] text-white">
-                  <Gift size={16} strokeWidth={2.2} />
-                </span>
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-[#3D5A73]">
-                    {activeGiftCard.kind === 'designed'
-                      ? t('gift.banner.toValidate')
-                      : t('gift.banner.toCompose')}
-                    {activeGiftCard.senderName
-                      ? ` · ${t('gift.banner.from')} ${activeGiftCard.senderName}`
-                      : ''}
-                  </p>
-                  <p className="mt-1 font-serif text-[16px] md:text-[18px] font-black uppercase tracking-tight text-[#2D3748]">
-                    {activeGiftCard.kind === 'designed'
-                      ? t('gift.banner.tweakDesigned')
-                      : t('gift.banner.composeOpen')}
-                  </p>
-                  {activeGiftCard.message && (
-                    <p className="mt-1 text-[12px] font-semibold italic text-[#718096]">
-                      « {activeGiftCard.message} »
-                    </p>
-                  )}
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  haptic(6);
-                  endRedemption();
-                }}
-                className="inline-flex h-9 items-center gap-2 self-start rounded-full border border-[#EEE9E0] bg-white px-3 text-[10px] font-black uppercase tracking-widest text-[#718096] transition-colors hover:border-[#A4473E] hover:text-[#A4473E]"
-              >
-                <X size={12} strokeWidth={2.2} />
-                {t('gift.banner.exit')}
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* ─── MAIN CARD : warm canvas containing the bracelet AND a floating palette ─── */}
         <div className="relative rounded-[2rem] md:rounded-[3rem] overflow-hidden border border-[#EEE9E0] shadow-md">
@@ -749,7 +654,7 @@ export function Configurator() {
             </div>
 
             {/* RIGHT — white palette card floating on the warm canvas */}
-            <div className="relative rounded-[1.5rem] md:rounded-[2rem] overflow-hidden bg-white border border-[#EEE9E0] shadow-md flex flex-col lg:max-h-[600px]">
+            <div className="relative rounded-[1.5rem] md:rounded-[2rem] overflow-hidden bg-white border border-[#EEE9E0] shadow-md flex flex-col lg:max-h-[630px]">
               <div className="overflow-y-auto scrollbar-thin">
                 {/* Tab nav — sticky edge-to-edge with its own padding.
                     Top of the palette also exposes an "Univers" pill row so
@@ -955,12 +860,10 @@ export function Configurator() {
         {/* ─── FULFILLMENT MODE ─── assembled-Paris vs DIY kit. Sits right
             above the cart row so the choice is visible at the same scroll
             depth as the price + Ajouter au panier button. Wording matches
-            Dany's branch verbatim. Hidden during a gift redemption — the
-            sender's chosen mode is already baked into the gift card.
-            Also hidden for Kawaii : the memory wire is too tricky to
-            close at home, so we always ship assembled (forced via
-            `effectiveFulfillmentMode`). */}
-        {!activeRedemptionCode && !isKawaii && (
+            Dany's branch verbatim. Hidden for Kawaii : the memory wire
+            is too tricky to close at home, so we always ship assembled
+            (forced via `effectiveFulfillmentMode`). */}
+        {!isKawaii && (
           <div className="mt-6 md:mt-8 rounded-[1.5rem] border border-[#EEE9E0] bg-white p-4 md:p-5 shadow-sm">
             <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-[#A8BED4]">
               {t('fulfillment.label')}
@@ -1002,13 +905,8 @@ export function Configurator() {
           </div>
         )}
 
-        {/* ─── ACTION ROW ─── primary CTA depends on context :
-            - normal : "Ajouter au panier"
-            - gift redemption : "Confirmer ce cadeau" (locks the bracelet for
-              the artisan; no payment since the sender already paid).
-            The "Offrir" button is hidden during redemption — the recipient
-            already has a gift, they don't need to make a new one. */}
-        <div className="mt-3 md:mt-4 grid sm:grid-cols-[1fr_auto_auto_auto] gap-3 items-stretch bg-[#F5F0E8] rounded-[1.5rem] p-4 md:p-5 border border-[#EEE9E0]">
+        {/* ─── ACTION ROW ─── price summary + share + add-to-cart. */}
+        <div className="mt-3 md:mt-4 grid sm:grid-cols-[1fr_auto_auto] gap-3 items-stretch bg-[#F5F0E8] rounded-[1.5rem] p-4 md:p-5 border border-[#EEE9E0]">
           <div className="flex items-center justify-between gap-3 px-2 sm:px-4">
             <div>
               <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-[#A8BED4] mb-1">
@@ -1021,7 +919,7 @@ export function Configurator() {
               </p>
             </div>
             <p className="font-serif text-[24px] md:text-[28px] font-black tracking-tighter text-[#2D3748] tabular-nums shrink-0">
-              {activeRedemptionCode ? t('action.offered') : formatPrice(price)}
+              {formatPrice(price)}
             </p>
           </div>
           <button
@@ -1037,61 +935,25 @@ export function Configurator() {
             )}
             {shareStatus ?? t('action.share')}
           </button>
-          {/* "Offrir" — only when not in redemption mode */}
-          {!activeRedemptionCode && (
+          <div ref={addToCartRef}>
             <button
               type="button"
-              onClick={() => {
-                haptic(6);
-                setGiftModalOpen(true);
-              }}
-              disabled={components.length === 0}
-              className="h-full w-full sm:w-auto px-5 py-4 rounded-xl border border-[#EEE9E0] bg-white text-[11px] md:text-[13px] font-black uppercase tracking-widest text-[#3D5A73] transition-colors hover:border-[#3D5A73] hover:text-[#2D3748] disabled:cursor-not-allowed disabled:opacity-40 inline-flex items-center justify-center gap-2"
+              onClick={handleAddToCart}
+              disabled={!canOrder}
+              className="w-full sm:w-auto h-full px-8 py-4 rounded-xl bg-[#3D5A73] hover:bg-[#2A3F50] text-white text-[11px] md:text-[13px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center justify-center gap-3"
             >
-              <Gift size={14} strokeWidth={2.2} />
-              {t('action.gift')}
+              {justAddedCart ? (
+                <>
+                  <Check size={16} strokeWidth={2.5} />
+                  {t('action.added')}
+                </>
+              ) : (
+                <>
+                  <ShoppingBag size={16} strokeWidth={2} />
+                  {t('action.addToCart')}
+                </>
+              )}
             </button>
-          )}
-          <div ref={addToCartRef}>
-            {activeRedemptionCode ? (
-              <button
-                type="button"
-                onClick={handleConfirmGift}
-                disabled={!canOrder}
-                className="w-full sm:w-auto h-full px-8 py-4 rounded-xl bg-[#244A35] hover:bg-[#1a3525] text-white text-[11px] md:text-[13px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center justify-center gap-3"
-              >
-                {giftRedeemedConfirm ? (
-                  <>
-                    <Check size={16} strokeWidth={2.5} />
-                    {t('action.confirmed')}
-                  </>
-                ) : (
-                  <>
-                    <Gift size={16} strokeWidth={2} />
-                    {t('action.confirmGift')}
-                  </>
-                )}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleAddToCart}
-                disabled={!canOrder}
-                className="w-full sm:w-auto h-full px-8 py-4 rounded-xl bg-[#3D5A73] hover:bg-[#2A3F50] text-white text-[11px] md:text-[13px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center justify-center gap-3"
-              >
-                {justAddedCart ? (
-                  <>
-                    <Check size={16} strokeWidth={2.5} />
-                    {t('action.added')}
-                  </>
-                ) : (
-                  <>
-                    <ShoppingBag size={16} strokeWidth={2} />
-                    {t('action.addToCart')}
-                  </>
-                )}
-              </button>
-            )}
           </div>
         </div>
       </div>
@@ -1118,34 +980,6 @@ export function Configurator() {
         }}
       />
 
-      <GiftModal
-        open={giftModalOpen}
-        initialMode="designed"
-        design={
-          // Snapshot the current bracelet so the gift carries a stable
-          // BraceletConfig, decoupled from later user edits.
-          components.length > 0
-            ? snapshotConfig(
-                useConfigurator.getState(),
-                draftTitle || DEFAULT_BRACELET_NAME,
-                undefined,
-              )
-            : undefined
-        }
-        onClose={() => setGiftModalOpen(false)}
-      />
-
-      <UnboxingModal
-        open={unboxingOpen}
-        title={draftTitle || DEFAULT_BRACELET_NAME}
-        price={price}
-        lengthMm={lengthMm}
-        onClose={() => setUnboxingOpen(false)}
-        onShare={() => {
-          setUnboxingOpen(false);
-          openShareModal();
-        }}
-      />
     </div>
   );
 }
@@ -1239,130 +1073,6 @@ function ShareModal({
                 >
                   <Share2 size={13} strokeWidth={2.2} />
                   {t('share.modal.confirm')}
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-}
-
-function UnboxingModal({
-  open,
-  title,
-  price,
-  lengthMm,
-  onClose,
-  onShare,
-}: {
-  open: boolean;
-  title: string;
-  price: number;
-  lengthMm: number;
-  onClose: () => void;
-  onShare: () => void;
-}) {
-  const { t, lang } = useT();
-  return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          key="digital-unboxing"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.18 }}
-          className="fixed inset-0 z-[2100] flex items-center justify-center bg-[rgba(26,32,44,0.62)] p-4 backdrop-blur-[3px]"
-          onClick={onClose}
-        >
-          <motion.div
-            initial={{ scale: 0.96, y: 18, opacity: 0 }}
-            animate={{ scale: 1, y: 0, opacity: 1 }}
-            exit={{ scale: 0.96, y: 10, opacity: 0 }}
-            transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-            className="relative w-full max-w-md overflow-hidden rounded-[1.75rem] border border-[#EEE9E0] bg-[#FBF8F2] shadow-2xl"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Fermer"
-              className="absolute right-4 top-4 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-[#718096] transition-colors hover:bg-white hover:text-[#2D3748]"
-            >
-              <X size={17} strokeWidth={2} />
-            </button>
-
-            <div className="relative min-h-[220px] overflow-hidden bg-[#EFE4D4] px-8 pt-10">
-              <div
-                aria-hidden
-                className="absolute inset-0 opacity-[0.22]"
-                style={{
-                  background:
-                    'radial-gradient(circle at 50% 12%, #FFFFFF 0%, transparent 35%), linear-gradient(135deg, #F7EFE5 0%, #DFCDB0 100%)',
-                }}
-              />
-              <motion.div
-                aria-hidden
-                initial={{ rotateX: 0, y: 0 }}
-                animate={{ rotateX: -64, y: -18 }}
-                transition={{ duration: 0.7, delay: 0.14, ease: [0.22, 1, 0.36, 1] }}
-                className="absolute left-1/2 top-12 h-16 w-64 origin-bottom -translate-x-1/2 rounded-t-2xl border border-[#CDBB9B] bg-[#E5D3B6] shadow-md"
-              />
-              <motion.div
-                aria-hidden
-                initial={{ y: 28, opacity: 0, scale: 0.94 }}
-                animate={{ y: 0, opacity: 1, scale: 1 }}
-                transition={{ duration: 0.55, delay: 0.34, ease: [0.22, 1, 0.36, 1] }}
-                className="relative mx-auto mt-20 h-20 w-64 rounded-2xl border border-[#CDBB9B] bg-white shadow-xl"
-              >
-                <div className="absolute left-1/2 top-1/2 h-10 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-[#3D5A73]/25" />
-                <div className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#D4A8A0] shadow-[34px_0_0_#7CADA6,-34px_0_0_#F5EDE0,68px_0_0_#3D5A73,-68px_0_0_#B8823C]" />
-              </motion.div>
-            </div>
-
-            <div className="p-6">
-              <div className="mb-4 inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#3D5A73]">
-                <PackageCheck size={14} strokeWidth={2.2} />
-                {t('unboxing.eyebrow')}
-              </div>
-              <h3 className="font-serif text-[26px] font-black uppercase leading-none tracking-tight text-[#2D3748]">
-                {title}
-              </h3>
-              <div className="mt-5 grid grid-cols-2 gap-2">
-                <div className="rounded-xl border border-[#EEE9E0] bg-white p-3">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-[#A8BED4]">
-                    {t('unboxing.length')}
-                  </p>
-                  <p className="mt-1 font-serif text-[18px] font-black text-[#2D3748]">
-                    {formatCmFromMm(lengthMm, lang)}
-                  </p>
-                </div>
-                <div className="rounded-xl border border-[#EEE9E0] bg-white p-3">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-[#A8BED4]">
-                    {t('unboxing.price')}
-                  </p>
-                  <p className="mt-1 font-serif text-[18px] font-black text-[#2D3748]">
-                    {formatPrice(price)}
-                  </p>
-                </div>
-              </div>
-              <div className="mt-5 grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="h-11 rounded-lg border border-[#EEE9E0] bg-white text-[10px] font-black uppercase tracking-widest text-[#3D5A73] transition-colors hover:border-[#3D5A73]"
-                >
-                  {t('unboxing.close')}
-                </button>
-                <button
-                  type="button"
-                  onClick={onShare}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#2D3748] text-[10px] font-black uppercase tracking-widest text-white transition-colors hover:bg-[#3D5A73]"
-                >
-                  <Share2 size={13} strokeWidth={2.2} />
-                  {t('unboxing.share')}
                 </button>
               </div>
             </div>

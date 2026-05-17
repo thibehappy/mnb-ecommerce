@@ -61,19 +61,19 @@ export function AttachmentPicker() {
                     : 'bg-[#F5F0E8] border-transparent hover:border-[#3D5A73] hover:bg-white hover:shadow-md',
                 )}
               >
-                <div className="h-14 w-14 flex items-center justify-center">
+                <div className="h-20 w-20 flex items-center justify-center">
                   {chain.images[0] ? (
                     <Image
                       src={chain.images[0]}
                       alt=""
-                      width={56}
-                      height={56}
-                      className="h-14 w-14 object-contain"
+                      width={80}
+                      height={80}
+                      className="h-20 w-20 object-contain"
                       unoptimized
                     />
                   ) : (
                     <span
-                      className="block h-7 w-7 rounded-full ring-2 ring-white shadow-sm"
+                      className="block h-10 w-10 rounded-full ring-2 ring-white shadow-sm"
                       style={{ backgroundColor: chain.hex }}
                     />
                   )}
@@ -118,20 +118,20 @@ export function AttachmentPicker() {
                     : 'bg-[#F5F0E8] border-transparent hover:border-[#3D5A73] hover:bg-white hover:shadow-md',
                 )}
               >
-                <div className="h-12 w-12 flex items-center justify-center">
+                <div className="h-20 w-20 flex items-center justify-center">
                   {clasp.images[0] ? (
                     <Image
                       src={clasp.images[0]}
                       alt=""
-                      width={48}
-                      height={48}
-                      className="h-12 w-12 object-contain"
+                      width={80}
+                      height={80}
+                      className="h-20 w-20 object-contain"
                       unoptimized
                     />
                   ) : (
                     <span
                       className={cn(
-                        'block h-6 w-6 ring-2 ring-white shadow-sm',
+                        'block h-10 w-10 ring-2 ring-white shadow-sm',
                         clasp.shape === 'heart' ? '' : 'rounded-full',
                       )}
                       style={{ backgroundColor: clasp.hex }}

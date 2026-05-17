@@ -410,48 +410,6 @@ export interface Cart {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Gift card
-───────────────────────────────────────────────────────────── */
-/**
- * Two flavors :
- *   - 'designed' : the sender designs a specific bracelet, the recipient
- *                  receives a code/link to view it and optionally tweak it
- *                  before the artisan finalizes the order.
- *   - 'open'     : the sender pre-pays an atelier, the recipient redeems
- *                  the code and composes their own bracelet from scratch
- *                  inside the chosen atelier.
- */
-export type GiftCardKind = 'designed' | 'open';
-
-export type GiftCardStatus = 'pending' | 'viewed' | 'redeemed';
-
-export interface GiftCard {
-  /** Human-readable code, e.g. `MNB-AB12-CD34`. Unique. */
-  code: string;
-  kind: GiftCardKind;
-  status: GiftCardStatus;
-  /** Pre-designed bracelet (kind === 'designed'). The recipient may load it,
-   *  optionally edit it, and confirm the order. Snapshot of the configurator
-   *  at gift creation time. */
-  design?: BraceletConfig;
-  /** Atelier locked in for an open gift (kind === 'open'). Pre-funded so the
-   *  recipient just composes inside that atelier. Required when kind = 'open'. */
-  atelierId?: UUID;
-  /** Pre-paid amount (the atelier price for open gifts, or the bracelet price
-   *  for designed gifts). Stored so the receipt is informational. */
-  amount: Euros;
-  senderName?: string;
-  recipientName?: string;
-  /** Free-form message printed on the gift card / shown to the recipient. */
-  message?: string;
-  createdAt: ISODate;
-  /** First time the recipient opened the gift (auto-set on redemption page). */
-  viewedAt?: ISODate;
-  /** Set when the recipient confirms — order is locked, no further edits. */
-  redeemedAt?: ISODate;
-}
-
-/* ─────────────────────────────────────────────────────────────
    Boutique (physical store)
 ───────────────────────────────────────────────────────────── */
 export interface Boutique {

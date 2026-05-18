@@ -27,14 +27,11 @@ export function CartPageClient() {
           <div>
             <p className="font-serif text-[26px] mb-2">Votre panier est vide</p>
             <p className="text-[15px] text-[var(--color-graphite)] max-w-sm">
-              Parcourez nos kits ou composez votre propre bracelet.
+              Composez votre propre bracelet dans l’atelier.
             </p>
           </div>
           <div className="flex gap-3 flex-wrap justify-center">
-            <Button href="/kits">Voir les kits</Button>
-            <Button href="/creer" variant="outline">
-              Créer un bracelet
-            </Button>
+            <Button href="/creer">Créer un bracelet</Button>
           </div>
         </div>
       ) : (

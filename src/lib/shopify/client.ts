@@ -10,7 +10,7 @@
  *   - `src/app/api/shopify/cart/route.ts`        (cartCreate mutation)
  *   - `src/lib/shopify/variants.ts`              (SKU → variant GID resolution)
  *
- * All catalog data (beads, charms, ateliers, kits) STAYS in `src/lib/mocks/`
+ * All catalog data (beads, charms, ateliers) STAYS in `src/lib/mocks/`
  * because Shopify products don't carry the front-side metadata (hex, shape,
  * sizeMm, etc.) needed by the 2D configurator. Shopify is used purely for
  * checkout + (eventually) stock decrement.

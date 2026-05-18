@@ -426,19 +426,6 @@ const BEADS_RAW: Bead[] = [
     description: 'Étoile émaillée violette aux reflets iridescents.',
     images: [],
   },
-  {
-    id: 'bead_flower_lilas',
-    name: 'Fleur lilas',
-    family: 'enamel',
-    hex: '#B8A4D4',
-    veinHex: '#8B7BA5',
-    shape: 'flower',
-    sizeMm: 12,
-    price: 4.5,
-    stock: 70,
-    description: 'Fleur translucide lilas, finition cristalline.',
-    images: [],
-  },
 
   // ── Enamel : non-shaped (cube / iridescent round)
   {
@@ -677,20 +664,6 @@ const BEADS_RAW: Bead[] = [
   },
 
   // ── Obsidian (3 variants)
-  {
-    id: 'bead_obsidian_8',
-    name: 'Obsidienne',
-    family: 'obsidian',
-    hex: '#3A3A3A',
-    veinHex: '#1A1A1A',
-    shape: 'round',
-    sizeMm: 8,
-    price: 2.8,
-    stock: 100,
-    description: 'Obsidienne mate gris foncé.',
-    meaning: ['ancrage', 'transformation'],
-    images: [],
-  },
   {
     id: 'bead_obsidian_8_v2',
     name: 'Obsidienne',
@@ -994,19 +967,6 @@ const BEADS_RAW: Bead[] = [
     price: 4.0,
     stock: 70,
     description: 'Bicône bi-color facetée violet-teal métallisé.',
-    images: [],
-  },
-  {
-    id: 'bead_cluster_iridescent',
-    name: 'Triple grappe iridescente',
-    family: 'enamel',
-    hex: '#5A3A8E',
-    veinHex: '#B8A0D8',
-    shape: 'flower',
-    sizeMm: 10,
-    price: 4.2,
-    stock: 70,
-    description: 'Trois perles violettes iridescentes liées en grappe.',
     images: [],
   },
 
@@ -1400,6 +1360,10 @@ const BEADS_RAW: Bead[] = [
     description: 'Obsidienne mate bleu nuit profond.',
     meaning: ['ancrage', 'mystere'],
     images: [],
+    // PNG decentered toward the upper-right of canvas → at default zoom 3
+    // the bead is pushed off the top of the tile. Reduce zoom so it stays
+    // in view (TODO: re-detour the PNG centered to remove this override).
+    pickerZoom: 1.0,
   },
 
   // ── Lapis (variants matte + faceted)
@@ -4156,19 +4120,6 @@ const BEADS_RAW: Bead[] = [
     price: 3.4,
     stock: 90,
     description: 'Perle rose pâle traversée d\'une bande noire.',
-    images: [],
-  },
-  {
-    id: 'bead_cluster_magenta',
-    name: 'Triple grappe magenta',
-    family: 'enamel',
-    hex: '#A82850',
-    veinHex: '#7C1A40',
-    shape: 'flower',
-    sizeMm: 10,
-    price: 4.2,
-    stock: 70,
-    description: 'Trois perles magenta brillantes en grappe.',
     images: [],
   },
 ];

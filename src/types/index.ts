@@ -272,53 +272,6 @@ export interface Atelier {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Kit (home creation box)
-───────────────────────────────────────────────────────────── */
-export type KitCategory = 'classique' | 'kawaii' | 'kawaii-premium';
-
-/** Reference prices per category — single source of truth */
-export const KIT_PRICES: Record<KitCategory, number> = {
-  classique: 36,
-  'kawaii-premium': 30,
-  kawaii: 24,
-};
-
-/** Duo prices : a bit less than 2× single */
-export const KIT_DUO_PRICES: Record<KitCategory, number> = {
-  classique: 65,
-  'kawaii-premium': 55,
-  kawaii: 44,
-};
-
-export interface Kit {
-  id: UUID;
-  slug: string;
-  name: string;
-  tagline: string;
-  description: string;
-  longDescription: string;
-  /** Pricing tier — 24 / 30 / 36 € for solo, derived from KIT_PRICES + numberOfBracelets */
-  category: KitCategory;
-  price: Euros;
-  /** Primary palette driving placeholder colors */
-  palette: string[];
-  /** Which stones appear in the kit */
-  beads: { beadId: UUID; quantity: number }[];
-  charms: { charmId: UUID; quantity: number }[];
-  baseType: BraceletBaseType;
-  /** Small editorial tags, e.g. "Fête des mères", "Estival", "Best-seller" */
-  tags: string[];
-  difficulty: 'debutant' | 'intermediaire' | 'expert';
-  makeTime: string; // e.g. "30 min"
-  /** 1 = solo, 2 = duo */
-  numberOfBracelets: number;
-  images: string[];
-  /** Featured on home page */
-  featured?: boolean;
-  stock: number;
-}
-
-/* ─────────────────────────────────────────────────────────────
    Bracelet custom configuration
 ───────────────────────────────────────────────────────────── */
 export interface BraceletComponent {
@@ -384,23 +337,14 @@ export interface BraceletConfig {
 /* ─────────────────────────────────────────────────────────────
    Cart / Order
 ───────────────────────────────────────────────────────────── */
-export type CartLineKind = 'kit' | 'custom';
+export type CartLineKind = 'custom';
 
-export interface CartLineKit {
-  lineId: string;
-  kind: 'kit';
-  kitId: UUID;
-  quantity: number;
-}
-
-export interface CartLineCustom {
+export interface CartLine {
   lineId: string;
   kind: 'custom';
   config: BraceletConfig;
   quantity: number;
 }
-
-export type CartLine = CartLineKit | CartLineCustom;
 
 export interface Cart {
   lines: CartLine[];

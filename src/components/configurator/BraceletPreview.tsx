@@ -4,6 +4,7 @@ import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState }
 import type { BraceletComponent } from '@/types';
 import { BEAD_BY_ID } from '@/lib/mocks/beads';
 import { CHARM_BY_ID } from '@/lib/mocks/charms';
+import { CHARM_ANNEAU_OFFSETS } from '@/lib/mocks/charm-anneau-offsets.generated';
 import { CHAIN_BY_ID, CLASP_BY_ID } from '@/lib/mocks/attachments';
 import { sizeMmOf, totalLengthMm } from '@/lib/store/configurator';
 import { cn } from '@/lib/utils/cn';
@@ -85,11 +86,14 @@ function viewBoxFor(variant: Variant): { width: number; height: number } {
   // extra headroom we had was unused space. yTop drops by the same
   // 120 px so sideLen (bracelet vertical sides) stays at 425.
   if (variant === 'u') return { width: 1000, height: 640 };
-  // Loop — height kept compact so the rendered SVG doesn't push the stage
-  // container taller than its min-h (which would shove the bottom action
-  // buttons offscreen). The curve is positioned at the center of this
-  // viewBox via cy = h/2 + ry/2 so empty space is symmetric top/bottom.
-  return { width: 1000, height: 420 };
+  // Loop — tall enough to hold the full bead photo box at the arc apex
+  // WITHOUT bleeding above the canvas (apex bead = LOOP_TOP_MARGIN, set to
+  // an 8 mm bead's displayRadius so its photo top sits exactly on y=0),
+  // and to hold a full charm body (~160 px) hanging from the arc tips at
+  // y = cy = ry + LOOP_TOP_MARGIN. Empty space at top/bottom is therefore
+  // intentionally minimal — bumped from 420 → 540 to consume the previously
+  // wasted top padding that was clipping the apex bead.
+  return { width: 1000, height: 540 };
 }
 
 const U_GEOM = (() => {
@@ -168,14 +172,28 @@ function uPath(): PathSampler {
   };
 }
 
-function loopPath({ width, height }: { width: number; height: number }): PathSampler {
+/**
+ * Loop variant — viewBox top padding above the curve apex.
+ *
+ * Sized to a typical 8 mm bead's displayRadius so the apex bead's photo
+ * box fits inside the viewBox without bleeding above y=0 (which would be
+ * clipped by the outer wrapper's overflow-hidden). Going much lower
+ * re-introduces the clipped-apex-bead bug; going much higher wastes
+ * vertical space that should be giving room to charms hanging from the
+ * cord tips at y = cy = ry + LOOP_TOP_MARGIN.
+ *
+ * Beads larger than 8 mm at the apex can still bleed slightly above y=0
+ * (acceptable since they're rare at that exact position), but the canvas
+ * is sized so 8 mm — the most common bracelet bead — never clips.
+ */
+const LOOP_TOP_MARGIN = 70;
+
+function loopPath({ width, height: _height }: { width: number; height: number }): PathSampler {
+  void _height;
   const cx = width / 2;
-  // Curve geometry stays absolute (rx=390, ry=294) so the bracelet shape is
-  // identical to before. cy is set so the curve is centered vertically in
-  // the taller viewBox (apex + baseline midpoint = height/2).
-  const rx = width * 0.39;
-  const ry = 294;
-  const cy = height / 2 + ry / 2;
+  const rx = width * 0.36;
+  const ry = 272;
+  const cy = ry + LOOP_TOP_MARGIN;
   // Numerical arc-length sampling — invert α(s) since the half-ellipse isn't
   // arc-length-parameterized analytically.
   const N = 200;
@@ -534,6 +552,14 @@ export const BraceletPreview = forwardRef<BraceletPreviewHandle, Props>(function
 
   /* ─── Pan handlers : drag empty stage area to translate when zoomed in ── */
   function handleStagePointerDown(e: React.PointerEvent) {
+    // Click on empty stage = clear the current selection. Bead / charm /
+    // figurine handlers all call e.stopPropagation() so they don't reach
+    // here — this only fires on background clicks. Configurator's onSelect
+    // toggles off when the same id is passed, so we re-pass the current
+    // selection to deselect it.
+    if (selectedSlotId && onSelect) {
+      onSelect(selectedSlotId);
+    }
     // Pan only makes sense when zoomed in.
     if (safeZoom <= 1.01) return;
     if (!onPanChange) return;
@@ -1045,11 +1071,15 @@ export const BraceletPreview = forwardRef<BraceletPreviewHandle, Props>(function
               const CHARM_HALF =
                 (CHARM_VISUAL_MM * pathScale * BRACELET_ZOOM) / 2;
               const CHARM_SIZE = CHARM_HALF * 2;
-              // Anneau hole sits ~10 % from the photo's top edge; offset
-              // the image upward so that hole aligns with the cord
-              // position instead of the visual top of the anneau ring.
-              // This pulls the body slightly closer to the bracelet.
-              const ANNEAU_OFFSET = CHARM_SIZE * 0.1;
+              // The anneau (attachment ring) sits at a different vertical
+              // position in each PNG — some have it at the top edge, others
+              // have ~30 % padding above it. CHARM_ANNEAU_OFFSETS is generated
+              // by scripts/compute_anneau_offsets.py which scans every PNG
+              // and records the fraction-from-top of the first opaque row.
+              // Falling back to 0.1 keeps unknown ids hanging close to the
+              // cord rather than floating far below.
+              const anneauPct = CHARM_ANNEAU_OFFSETS[comp.refId] ?? 0.1;
+              const ANNEAU_OFFSET = CHARM_SIZE * anneauPct;
 
               return (
                 <g key={comp.slotId} {...common}>
@@ -1198,10 +1228,11 @@ function Cord({
     );
   }
   // Same geometry as loopPath — keep the cord and the bead positions in sync.
+  void height;
   const cx = width / 2;
-  const rx = width * 0.39;
-  const ry = 294;
-  const cy = height / 2 + ry / 2;
+  const rx = width * 0.36;
+  const ry = 272;
+  const cy = ry + LOOP_TOP_MARGIN;
   const d = `M ${cx - rx} ${cy} A ${rx} ${ry} 0 0 1 ${cx + rx} ${cy}`;
   return (
     <g filter="url(#mnb-cord-shadow)">

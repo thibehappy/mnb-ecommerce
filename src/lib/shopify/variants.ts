@@ -2,9 +2,9 @@
  * Resolve front-side SKUs (e.g. "MNB-CUSTOM-KAWAII") to Shopify variant
  * GIDs (e.g. "gid://shopify/ProductVariant/45678901234").
  *
- * Strategy : on first request, query both products (bracelet + kit) by
- * handle, collect all variants, and cache the SKU → GID map in memory for
- * the lifetime of the server process (Next will recycle the cache on a
+ * Strategy : on first request, query the bracelet product by handle,
+ * collect all variants, and cache the SKU → GID map in memory for the
+ * lifetime of the server process (Next will recycle the cache on a
  * cold start). Re-queries happen only on cache miss.
  *
  * Why SKU-based mapping rather than env vars ?
@@ -46,10 +46,7 @@ const skuCache = new Map<string, string>();
 const loadedHandles = new Set<string>();
 
 function getHandles(): string[] {
-  return [
-    process.env.SHOPIFY_HANDLE_BRACELET ?? 'bracelet-personnalise-mnb',
-    process.env.SHOPIFY_HANDLE_KIT ?? 'kit-diy-mnb',
-  ];
+  return [process.env.SHOPIFY_HANDLE_BRACELET ?? 'bracelet-personnalise-mnb'];
 }
 
 /**
@@ -85,8 +82,6 @@ export async function resolveVariantGid(sku: string): Promise<string> {
   if (skuCache.has(sku)) {
     return skuCache.get(sku)!;
   }
-  // Load all configured products until we find the SKU (most common case :
-  // first product matches, second handle never queried).
   for (const handle of getHandles()) {
     await loadProductVariants(handle);
     if (skuCache.has(sku)) {

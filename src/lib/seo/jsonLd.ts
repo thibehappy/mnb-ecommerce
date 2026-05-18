@@ -1,25 +1,6 @@
-import type { Kit, Boutique } from '@/types';
+import type { Boutique } from '@/types';
 
 const BASE = 'https://mynicebracelet.com';
-
-export function kitJsonLd(kit: Kit) {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'Product',
-    name: kit.name,
-    description: kit.description,
-    brand: { '@type': 'Brand', name: 'MyNiceBracelet' },
-    sku: kit.id,
-    offers: {
-      '@type': 'Offer',
-      priceCurrency: 'EUR',
-      price: kit.price,
-      availability:
-        kit.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
-      url: `${BASE}/kits/${kit.slug}`,
-    },
-  };
-}
 
 export function boutiqueJsonLd(boutique: Boutique) {
   return {

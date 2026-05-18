@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Button } from '@/components/ui/Button';
@@ -17,13 +16,10 @@ export default function NotFound() {
         </p>
         <div className="flex gap-3">
           <Button href="/">Retour à l&rsquo;accueil</Button>
-          <Button href="/kits" variant="outline">
-            Voir les kits
+          <Button href="/creer" variant="outline">
+            Créer un bracelet
           </Button>
         </div>
-        <Link href="/creer" className="mt-8 link-underline text-[13px]">
-          Ou créer un bracelet
-        </Link>
       </main>
       <Footer />
     </>

@@ -33,6 +33,7 @@ import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 import { BEADS } from '../src/lib/mocks/beads';
 import { CHARMS } from '../src/lib/mocks/charms';
+import { CHAINS, CLASPS } from '../src/lib/mocks/attachments';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -219,6 +220,76 @@ for (const charm of CHARMS) {
   });
 }
 
+// Attachments (chains + clasps) — Kawaii figurine accessory system.
+// The Attachment* types don't carry price/stock fields (they're picker
+// accessories paired with a figurine, not standalone catalog items),
+// so we default to 0.50 EUR symbolic price + 100 stock. Like the beads
+// and charms above, these SKUs are NEVER added to a customer cart —
+// they exist only so the webhook can decrement their stock when a
+// Kawaii bracelet that uses them ships.
+const ATTACHMENT_DEFAULT_PRICE = '0.50';
+const ATTACHMENT_DEFAULT_STOCK = '100';
+
+for (const chain of CHAINS) {
+  const imageUrl = publicImageToGithubUrl(chain.images[0]);
+  rows.push({
+    Handle: handleFromId(chain.id),
+    Title: `[Stock] ${chain.name}`,
+    'Body (HTML)':
+      `<p>Chaine a billes (accessoire figurine Kawaii) — ${chain.color}.</p>` +
+      `<p><em>SKU interne attache — unite de stock decrementee automatiquement quand un bracelet Kawaii utilisant cette chaine est commande.</em></p>`,
+    Vendor: 'My Nice Bracelet',
+    Type: 'Chaine',
+    Tags: `mnb-stock,attache,chain,${chain.color}`,
+    Published: 'FALSE',
+    'Option1 Name': 'Format',
+    'Option1 Value': '1 piece',
+    'Variant SKU': skuFromId(chain.id),
+    'Variant Inventory Tracker': 'shopify',
+    'Variant Inventory Qty': ATTACHMENT_DEFAULT_STOCK,
+    'Variant Inventory Policy': 'deny',
+    'Variant Fulfillment Service': 'manual',
+    'Variant Price': ATTACHMENT_DEFAULT_PRICE,
+    'Variant Requires Shipping': 'FALSE',
+    'Variant Taxable': 'FALSE',
+    'Variant Grams': '1',
+    'Image Src': imageUrl,
+    'Image Position': imageUrl ? '1' : '',
+    'Image Alt Text': imageUrl ? chain.name : '',
+    Status: 'active',
+  });
+}
+
+for (const clasp of CLASPS) {
+  const imageUrl = publicImageToGithubUrl(clasp.images[0]);
+  rows.push({
+    Handle: handleFromId(clasp.id),
+    Title: `[Stock] ${clasp.name}`,
+    'Body (HTML)':
+      `<p>Anneau de fermeture (accessoire figurine Kawaii) — forme ${clasp.shape}.</p>` +
+      `<p><em>SKU interne attache — unite de stock decrementee automatiquement quand un bracelet Kawaii utilisant cet anneau est commande.</em></p>`,
+    Vendor: 'My Nice Bracelet',
+    Type: 'Anneau',
+    Tags: `mnb-stock,attache,clasp,${clasp.shape}`,
+    Published: 'FALSE',
+    'Option1 Name': 'Format',
+    'Option1 Value': '1 piece',
+    'Variant SKU': skuFromId(clasp.id),
+    'Variant Inventory Tracker': 'shopify',
+    'Variant Inventory Qty': ATTACHMENT_DEFAULT_STOCK,
+    'Variant Inventory Policy': 'deny',
+    'Variant Fulfillment Service': 'manual',
+    'Variant Price': ATTACHMENT_DEFAULT_PRICE,
+    'Variant Requires Shipping': 'FALSE',
+    'Variant Taxable': 'FALSE',
+    'Variant Grams': '1',
+    'Image Src': imageUrl,
+    'Image Position': imageUrl ? '1' : '',
+    'Image Alt Text': imageUrl ? clasp.name : '',
+    Status: 'active',
+  });
+}
+
 mkdirSync(dirname(OUT_PATH), { recursive: true });
 const header = COLUMNS.join(',');
 // UTF-8 BOM so Excel on Windows opens it as UTF-8 (consistent with the
@@ -228,7 +299,7 @@ writeFileSync(OUT_PATH, csv, 'utf-8');
 
 const pushed = isHeadPushed(SHA);
 console.log(`Wrote ${rows.length} rows -> ${OUT_PATH}`);
-console.log(`  ${BEADS.length} beads + ${CHARMS.length} charms`);
+console.log(`  ${BEADS.length} beads + ${CHARMS.length} charms + ${CHAINS.length} chains + ${CLASPS.length} clasps`);
 console.log(`  Images pinned to commit ${SHA.slice(0, 12)}${pushed ? '' : '  ⚠ NOT pushed to origin yet'}`);
 if (!pushed) {
   console.log('');

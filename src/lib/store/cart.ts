@@ -2,14 +2,12 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { BraceletConfig, CartLine, Kit } from '@/types';
-import { KIT_BY_ID } from '@/lib/mocks/kits';
+import type { BraceletConfig, CartLine } from '@/types';
 import { uid } from '@/lib/utils/format';
 
 interface CartState {
   lines: CartLine[];
   isOpen: boolean;
-  addKit: (kit: Kit, quantity?: number) => void;
   addCustom: (config: BraceletConfig, quantity?: number) => void;
   updateQuantity: (lineId: string, quantity: number) => void;
   remove: (lineId: string) => void;
@@ -24,27 +22,6 @@ export const useCart = create<CartState>()(
     (set) => ({
       lines: [],
       isOpen: false,
-      addKit: (kit, quantity = 1) =>
-        set((state) => {
-          const existing = state.lines.find(
-            (l) => l.kind === 'kit' && l.kitId === kit.id,
-          );
-          if (existing && existing.kind === 'kit') {
-            return {
-              lines: state.lines.map((l) =>
-                l.lineId === existing.lineId ? { ...l, quantity: l.quantity + quantity } : l,
-              ),
-              isOpen: true,
-            };
-          }
-          return {
-            lines: [
-              ...state.lines,
-              { lineId: uid('line'), kind: 'kit', kitId: kit.id, quantity },
-            ],
-            isOpen: true,
-          };
-        }),
       addCustom: (config, quantity = 1) =>
         set((state) => ({
           lines: [
@@ -74,10 +51,6 @@ export const useCart = create<CartState>()(
 );
 
 export function subtotalForLine(line: CartLine): number {
-  if (line.kind === 'kit') {
-    const kit = KIT_BY_ID[line.kitId];
-    return (kit?.price ?? 0) * line.quantity;
-  }
   return line.config.price * line.quantity;
 }
 

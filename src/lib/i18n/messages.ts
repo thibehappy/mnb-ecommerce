@@ -143,16 +143,14 @@ const FR: Dict = {
   'checkout.shippingFree': 'Offerte',
   'checkout.total': 'Total',
   'checkout.qty': 'Qté',
-  'checkout.kit': 'Kit',
   'checkout.trust.payment': 'Paiement sécurisé',
   'checkout.trust.delivery': 'Livraison soignée',
   'checkout.trust.packaging': 'Emballage offert',
 
   // Empty cart
   'emptyCart.title': 'Votre panier est vide',
-  'emptyCart.subtitle': 'Composez votre bracelet ou parcourez nos kits avant de passer commande.',
+  'emptyCart.subtitle': 'Composez votre bracelet avant de passer commande.',
   'emptyCart.createMine': 'Créer le mien',
-  'emptyCart.viewKits': 'Voir les kits',
 
   // Confirmation
   'confirm.eyebrow': 'Commande confirmée',
@@ -256,12 +254,10 @@ const FR: Dict = {
   'cart.checkout': 'Passer commande',
   'cart.continueShopping': 'Continuer mes achats',
   'cart.empty.title': 'Votre panier est vide',
-  'cart.empty.subtitle': 'Découvrez nos kits ou composez un bracelet unique.',
-  'cart.empty.viewKits': 'Voir les kits',
+  'cart.empty.subtitle': 'Composez un bracelet unique dans l’atelier.',
   'cart.empty.create': 'Créer un bracelet',
 
   // Cart line item
-  'cartLine.kit': 'Kit',
   'cartLine.creation': 'Création',
   'cartLine.titleFallback': 'Bracelet personnalisé',
   'cartLine.elements': 'éléments',
@@ -277,7 +273,6 @@ const FR: Dict = {
   'footer.legal': 'Mentions légales',
   'footer.privacy': 'Confidentialité',
   'footer.cgv': 'CGV',
-  'footer.kits': 'Kits',
   'footer.create': 'Créer mon bracelet',
 
   // Misc
@@ -414,16 +409,14 @@ const EN: Dict = {
   'checkout.shippingFree': 'Free',
   'checkout.total': 'Total',
   'checkout.qty': 'Qty',
-  'checkout.kit': 'Kit',
   'checkout.trust.payment': 'Secure payment',
   'checkout.trust.delivery': 'Careful delivery',
   'checkout.trust.packaging': 'Free packaging',
 
   // Empty cart
   'emptyCart.title': 'Your cart is empty',
-  'emptyCart.subtitle': 'Compose your bracelet or browse our kits before checking out.',
+  'emptyCart.subtitle': 'Compose your bracelet before checking out.',
   'emptyCart.createMine': 'Create my own',
-  'emptyCart.viewKits': 'View kits',
 
   // Confirmation
   'confirm.eyebrow': 'Order confirmed',
@@ -525,12 +518,10 @@ const EN: Dict = {
   'cart.checkout': 'Checkout',
   'cart.continueShopping': 'Continue shopping',
   'cart.empty.title': 'Your cart is empty',
-  'cart.empty.subtitle': 'Discover our kits or compose a unique bracelet.',
-  'cart.empty.viewKits': 'View kits',
+  'cart.empty.subtitle': 'Compose a unique bracelet in the workshop.',
   'cart.empty.create': 'Create a bracelet',
 
   // Cart line item
-  'cartLine.kit': 'Kit',
   'cartLine.creation': 'Creation',
   'cartLine.titleFallback': 'Custom bracelet',
   'cartLine.elements': 'pieces',
@@ -546,7 +537,6 @@ const EN: Dict = {
   'footer.legal': 'Legal notice',
   'footer.privacy': 'Privacy',
   'footer.cgv': 'Terms',
-  'footer.kits': 'Kits',
   'footer.create': 'Create my bracelet',
 
   'misc.optional': 'optional',

@@ -19,7 +19,6 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { BraceletGlyph } from '@/components/ui/BraceletGlyph';
-import { KIT_BY_ID } from '@/lib/mocks/kits';
 import { useCart, cartSubtotal, cartShipping, cartTotal, subtotalForLine } from '@/lib/store/cart';
 import { useT } from '@/lib/i18n/use-t';
 import { formatPrice } from '@/lib/utils/format';
@@ -413,28 +412,6 @@ function CartLineSummary({
   line: ReturnType<typeof useCart.getState>['lines'][number];
 }) {
   const { t } = useT();
-  if (line.kind === 'kit') {
-    const kit = KIT_BY_ID[line.kitId];
-    return (
-      <div className="flex items-center gap-3">
-        <div className="h-14 w-14 shrink-0 rounded-lg bg-[#F5F0E8] flex items-center justify-center">
-          <Package size={18} strokeWidth={2} className="text-[#3D5A73]" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-[13px] font-black uppercase tracking-tight text-[#2D3748] truncate">
-            {kit?.name ?? '—'}
-          </p>
-          <p className="text-[10px] font-semibold text-[#A8BED4] uppercase tracking-widest mt-0.5">
-            {t('checkout.kit')} · {t('checkout.qty')} {line.quantity}
-          </p>
-        </div>
-        <span className="font-serif text-[15px] font-black tabular-nums text-[#2D3748] shrink-0">
-          {formatPrice(subtotalForLine(line))}
-        </span>
-      </div>
-    );
-  }
-
   // Custom bracelet line — show a mini glyph preview
   const isDiy = line.config.fulfillmentMode === 'diy-kit';
   return (
@@ -506,10 +483,9 @@ function EmptyCart() {
           <p className="mt-3 text-[14px] text-[#718096] leading-relaxed">
             {t('emptyCart.subtitle')}
           </p>
-          <div className="mt-6 grid grid-cols-2 gap-2">
-            <Button href="/creer">{t('emptyCart.createMine')}</Button>
-            <Button href="/kits" variant="outline">
-              {t('emptyCart.viewKits')}
+          <div className="mt-6">
+            <Button href="/creer" fullWidth>
+              {t('emptyCart.createMine')}
             </Button>
           </div>
         </div>

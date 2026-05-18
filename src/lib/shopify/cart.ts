@@ -19,11 +19,10 @@
  *     synthetic "Bracelet personnalise" variant (which has 10k stock).
  */
 
-import type { BraceletConfig, CartLine, Kit } from '@/types';
+import type { BraceletConfig, CartLine } from '@/types';
 import { ATELIER_BY_ID } from '@/lib/mocks/ateliers';
 import { BEAD_BY_ID } from '@/lib/mocks/beads';
 import { CHARM_BY_ID } from '@/lib/mocks/charms';
-import { KIT_BY_ID } from '@/lib/mocks/kits';
 import { shopifyFetch, ShopifyError } from './client';
 import { resolveVariantGid } from './variants';
 
@@ -86,17 +85,6 @@ function skuForCustom(config: BraceletConfig): string {
     default:
       throw new ShopifyError(`Unknown atelier "${config.atelierId}" — no Shopify SKU mapping`, 400);
   }
-}
-
-function skuForKit(kit: Kit): string {
-  const tier = kit.numberOfBracelets >= 2 ? 'DUO' : 'SOLO';
-  const cat =
-    kit.category === 'kawaii-premium'
-      ? 'KAWAII-PREMIUM'
-      : kit.category === 'kawaii'
-        ? 'KAWAII'
-        : 'CLASSIQUE';
-  return `MNB-KIT-${cat}-${tier}`;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -195,16 +183,6 @@ function attributesForCustom(config: BraceletConfig): ShopifyAttribute[] {
   return attrs;
 }
 
-function attributesForKit(kit: Kit): ShopifyAttribute[] {
-  return [
-    { key: 'Kit', value: kit.name },
-    { key: 'Style', value: kit.tagline.slice(0, 150) },
-    { key: 'Bracelets inclus', value: String(kit.numberOfBracelets) },
-    { key: '_kit_slug', value: kit.slug },
-    { key: '_kit_id', value: kit.id },
-  ];
-}
-
 /* ─────────────────────────────────────────────────────────────
    Public API
 ───────────────────────────────────────────────────────────── */
@@ -215,27 +193,13 @@ export async function buildShopifyLines(
 ): Promise<ShopifyCartLineInput[]> {
   const out: ShopifyCartLineInput[] = [];
   for (const line of lines) {
-    if (line.kind === 'kit') {
-      const kit = KIT_BY_ID[line.kitId];
-      if (!kit) {
-        throw new ShopifyError(`Unknown kit "${line.kitId}"`, 400);
-      }
-      const sku = skuForKit(kit);
-      const merchandiseId = await resolveVariantGid(sku);
-      out.push({
-        merchandiseId,
-        quantity: line.quantity,
-        attributes: attributesForKit(kit),
-      });
-    } else {
-      const sku = skuForCustom(line.config);
-      const merchandiseId = await resolveVariantGid(sku);
-      out.push({
-        merchandiseId,
-        quantity: line.quantity,
-        attributes: attributesForCustom(line.config),
-      });
-    }
+    const sku = skuForCustom(line.config);
+    const merchandiseId = await resolveVariantGid(sku);
+    out.push({
+      merchandiseId,
+      quantity: line.quantity,
+      attributes: attributesForCustom(line.config),
+    });
   }
   return out;
 }

@@ -77,10 +77,7 @@ export function CartDrawer() {
             {t('cart.empty.subtitle')}
           </p>
           <div className="mt-2 flex flex-col gap-2 w-full max-w-[220px]">
-            <Button href="/kits" onClick={close} variant="primary" fullWidth>
-              {t('cart.empty.viewKits')}
-            </Button>
-            <Button href="/creer" onClick={close} variant="outline" fullWidth>
+            <Button href="/creer" onClick={close} variant="primary" fullWidth>
               {t('cart.empty.create')}
             </Button>
           </div>

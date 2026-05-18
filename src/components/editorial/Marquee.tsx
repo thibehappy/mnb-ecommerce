@@ -1,7 +1,6 @@
 const ITEMS = [
   'Assemblé à Paris',
   'Pierres semi-précieuses',
-  'Kits à créer chez soi',
   'Personnalisé',
   'Livraison rapide',
   'Paiement sécurisé',

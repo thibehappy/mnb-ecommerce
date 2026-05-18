@@ -9,7 +9,6 @@ export function Footer() {
   const { t } = useT();
   const NAV_LINKS = [
     { href: '/', label: t('header.home') },
-    { href: '/kits', label: t('footer.kits') },
     { href: '/creer', label: t('footer.create') },
   ];
 
